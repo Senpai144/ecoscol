@@ -15,6 +15,7 @@ import RecuPage from './pages/RecuPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
 import VieScolairePage from './pages/VieScolairePage.jsx';
 import FinancePage from './pages/FinancePage.jsx';
+import ParametresEcolePage from './pages/ParametresEcolePage.jsx';
 import './index.css';
 
 const MARQUE = (
@@ -42,6 +43,11 @@ function IconeClasses() {
 function IconeComptes() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+  );
+}
+function IconeParametres() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
   );
 }
 function IconeVieScolaire() {
@@ -72,6 +78,7 @@ function LayoutApp() {
     { vers: '/vie-scolaire', label: 'Vie scolaire', visible: peutVieScolaire, icone: <IconeVieScolaire /> },
     { vers: '/finances', label: 'Finances', visible: peutFinances, icone: <IconeFinances /> },
     { vers: '/comptes', label: 'Comptes', visible: roles.includes('ADMIN'), icone: <IconeComptes /> },
+    { vers: '/parametres', label: 'Paramètres', visible: roles.includes('ADMIN'), icone: <IconeParametres /> },
   ];
 
   return (
@@ -192,6 +199,7 @@ export default function App() {
           <Route element={<ProtectedRoute><LayoutApp /></ProtectedRoute>}>
             <Route path="/tableau-de-bord" element={<DashboardPage />} />
             <Route path="/comptes" element={<ProtectedRoute roles={['ADMIN']}><Comptes /></ProtectedRoute>} />
+            <Route path="/parametres" element={<ProtectedRoute roles={['ADMIN']}><ParametresEcolePage /></ProtectedRoute>} />
             <Route path="/eleves" element={<ProtectedRoute roles={['ADMIN', 'SECRETARIAT', 'CENSEUR']}><ScolariteElevesPage /></ProtectedRoute>} />
             <Route path="/eleves/inscription" element={<ProtectedRoute roles={['ADMIN', 'SECRETARIAT']}><InscriptionPage /></ProtectedRoute>} />
             <Route path="/eleves/:id" element={<FicheElevePage />} />

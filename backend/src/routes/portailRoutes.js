@@ -447,7 +447,7 @@ router.get('/recus/:paiementId', async (req, res, next) => {
          WHERE e.id = $1`,
         [paiement.eleve_id]
       ),
-      db.query('SELECT nom, adresse, telephone, email, slogan FROM ecoles WHERE id = $1', [paiement.ecole_id]),
+      db.query('SELECT nom, adresse, telephone, email, slogan, logo_base64 FROM ecoles WHERE id = $1', [paiement.ecole_id]),
       db.query(
         `SELECT t.prenom, t.nom
          FROM tuteurs t JOIN eleve_tuteurs et ON et.tuteur_id = t.id

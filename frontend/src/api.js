@@ -55,12 +55,17 @@ export function effacerSession() {
 }
 
 export async function seConnecter(identifiant, motDePasse) {
-  const data = await apiFetch('/api/auth/login', {
-    method: 'POST',
-    body: { identifiant, mot_de_passe: motDePasse },
-  });
+  const data = await apiFetch('/api/auth/login', { method: 'POST', body: { identifiant, mot_de_passe: motDePasse } });
   sauvegarderSession({ token: data.token, user: data.user });
   return data.user;
+}
+
+export async function getParametresEcole(token) {
+  return apiFetch('/api/structure/ecole', { token });
+}
+
+export async function updateParametresEcole(data, token) {
+  return apiFetch('/api/structure/ecole', { method: 'PATCH', body: data, token });
 }
 
 export async function seDeconnecter(token) {

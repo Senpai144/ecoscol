@@ -135,4 +135,43 @@ router.patch('/annees-scolaires/:id/activer', requireRoles('ADMIN', 'SECRETARIAT
   }
 });
 
+// ---- Paramètres de l'établissement (identité, coordonnées, logo) ----
+const ROLES_LECTURE_PARAMETRES = ['ADMIN', 'SECRETARIAT', 'CENSEUR', 'COMPTABLE'];
+
+router.get('/ecole', requireRoles(...ROLES_LECTURE_PARAMETRES), async (req, res, next) => {
+  try {
+    const { rows } = await db.query(
+      'SELECT id, nom, adresse, telephone, email, slogan, logo_base64 FROM ecoles WHERE id = $1',
+      [req.user.ecole_id]
+    );
+    res.json({ ecole: rows[0] ?? null });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Logo + coordonnées de l'établissement, utilisés sur les reçus et documents.
+router.patch('/ecole', requireRoles('ADMIN', 'SECRETARIAT'), async (req, res, next) => {
+  const { nom, adresse, telephone, email, slogan, logo_base64 } = req.body ?? {};
+  if (!nom) return res.status(400).json({ error: 'Nom de l\'établissement requis' });
+  try {
+    const { rows } = await db.query(
+      `UPDATE ecoles
+       SET nom = $1, adresse = $2, telephone = $3, email = $4, slogan = $5,
+           logo_base64 = $6, updated_at = NOW()
+       WHERE id = $7 RETURNING id, nom, adresse, telephone, email, slogan, logo_base64`,
+      [nom, adresse ?? null, telephone ?? null, email ?? null, slogan ?? null,
+       logo_base64 ?? null, req.user.ecole_id]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'Établissement introuvable' });
+    await journaliserAction({
+      userId: req.user.id, action: 'mise_a_jour_ecole', cible: 'ecoles',
+      details: { nom: rows[0].nom, logo: logo_base64 ? 'modifié' : 'inchangé' },
+    });
+    res.json({ ecole: rows[0] });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;
