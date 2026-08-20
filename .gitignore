@@ -1,0 +1,27 @@
+# Dépendances
+node_modules/
+
+# Builds
+dist/
+build/
+
+# Environnement et secrets - JAMAIS commités
+.env
+.env.local
+.env.production
+*.env
+
+# Logs
+*.log
+npm-debug.log*
+
+# Système
+.DS_Store
+Thumbs.db
+
+# Docs générées
+docs/build/
+
+# Sauvegardes locales
+backups/
+*.sql.gz

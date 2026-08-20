@@ -1,0 +1,27 @@
+{
+  "name": "ecoscol-backend",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "API REST ECOSCOL - Plateforme web de gestion scolaire",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "migrate": "node scripts/migrate.js",
+    "db:seed": "node scripts/seed.js",
+    "test": "node --test tests/"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^8.6.2",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.12.0"
+  }
+}

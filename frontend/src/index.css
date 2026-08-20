@@ -1,0 +1,197 @@
+:root {
+  --primary: #1a5276;
+  --primary-dark: #143e58;
+  --accent: #28b463;
+  --error: #c0392b;
+  --warn: #d68910;
+  --bg: #f4f6f7;
+  --text: #2c3e50;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.container {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+h1 {
+  color: var(--primary-dark);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.grid section {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+a {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.status {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.status-pending { background: #fef9e7; color: var(--warn); }
+.status-ok { background: #eafaf1; color: var(--accent); }
+.status-error { background: #fdedec; color: var(--error); }
+
+@media (max-width: 600px) {
+  .container { padding: 0.75rem; }
+  h1 { font-size: 1.5rem; }
+}
+
+/* --- Connexion --- */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.auth-card {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.auth-card h1 {
+  margin: 0;
+  text-align: center;
+}
+
+.auth-subtitle {
+  text-align: center;
+  color: #7f8c8d;
+  margin-top: 0.25rem;
+}
+
+.auth-card label {
+  display: block;
+  margin: 0.75rem 0 0.25rem;
+  font-weight: 600;
+}
+
+.auth-card input {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+.auth-card input:focus {
+  outline: 2px solid var(--primary);
+  border-color: var(--primary);
+}
+
+.auth-link {
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
+/* --- Boutons et alertes --- */
+.btn {
+  display: inline-block;
+  padding: 0.6rem 1.25rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+}
+
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-primary:disabled { opacity: 0.6; cursor: wait; }
+
+.btn-block { width: 100%; margin-top: 1rem; }
+
+.btn-ghost {
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  margin-left: 0.75rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+.alert {
+  padding: 0.6rem 0.9rem;
+  border-radius: 6px;
+  margin: 0.75rem 0;
+  font-size: 0.95rem;
+}
+
+.alert-error {
+  background: #fdedec;
+  color: var(--error);
+  border: 1px solid var(--error);
+}
+
+/* --- En-tête app --- */
+.topbar {
+  background: var(--primary-dark);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  flex-wrap: wrap;
+}
+
+.topbar nav {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.topbar nav a {
+  color: #fff;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.topbar nav a:hover { text-decoration: underline; }
+
+.topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+}
