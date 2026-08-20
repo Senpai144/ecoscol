@@ -1,6 +1,11 @@
 import { Router } from 'express';
+import path from 'node:path';
 import db from '../db/index.js';
 import { authenticate, requireRoles } from '../middleware/auth.js';
+import { journaliserAction } from '../services/authService.js';
+import { notifierParents } from '../services/notificationService.js';
+import { creerPaiement, MODES_PAIEMENT } from '../services/financeService.js';
+import { genererRecu, cheminAbsolu } from '../services/pdfService.js';
 
 const router = Router();
 router.use(authenticate, requireRoles('PARENT'));
@@ -221,6 +226,153 @@ router.get('/tableau-de-bord', async (req, res, next) => {
         date: new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }),
       },
       enfants: resultats,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+async function enfantDuParent(userId, ecoleId, eleveId) {
+  const { rows } = await db.query(
+    `SELECT e.id, e.nom, e.prenom, e.matricule, e.classe_id
+     FROM tuteurs t
+     JOIN eleve_tuteurs et ON et.tuteur_id = t.id
+     JOIN eleves e ON e.id = et.eleve_id AND e.ecole_id = $2
+     WHERE t.user_id = $1 AND t.ecole_id = $2 AND e.id = $3`,
+    [userId, ecoleId, eleveId]
+  );
+  return rows[0] ?? null;
+}
+
+router.get('/paiements/:eleveId', async (req, res, next) => {
+  const eleveId = parseInt(req.params.eleveId, 10);
+  try {
+    const enfant = await enfantDuParent(req.user.id, req.user.ecole_id, eleveId);
+    if (!enfant) return res.status(404).json({ error: 'Dossier élève introuvable pour ce compte parent' });
+
+    const { rows: echeanciers } = await db.query(
+      `SELECT ec.*, a.libelle AS annee_libelle
+       FROM echeanciers ec
+       JOIN annees_scolaires a ON a.id = ec.annee_scolaire_id
+       WHERE ec.eleve_id = $1
+       ORDER BY ec.date_echeance`,
+      [eleveId]
+    );
+    const { rows: paiements } = await db.query(
+      `SELECT p.*, ec.libelle AS echeancier_libelle,
+              dg.chemin_fichier AS recu_fichier
+       FROM paiements p
+       LEFT JOIN echeanciers ec ON ec.id = p.echeancier_id
+       LEFT JOIN documents_generes dg ON dg.paiement_id = p.id AND dg.type = 'recu'
+       WHERE p.eleve_id = $1
+       ORDER BY p.date_paiement DESC, p.id DESC`,
+      [eleveId]
+    );
+
+    const totalDu = echeanciers.reduce((s, e) => s + Number(e.montant_du), 0);
+    const resteDu = echeanciers.reduce((s, e) => s + Number(e.solde), 0);
+    const totalPaye = paiements
+      .filter((p) => !p.recu_annule)
+      .reduce((s, p) => s + Number(p.montant), 0);
+
+    res.json({ eleve: enfant, echeanciers, paiements, totalDu, totalPaye, resteDu });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Paiement en ligne (mobile money) — la passerelle est simulée : la référence de
+// transaction fournie (ou générée) tient lieu d'accusé de confirmation du réseau.
+router.post('/paiements', async (req, res, next) => {
+  const { eleve_id, echeancier_id, montant, motif, mode, transaction_ref } = req.body ?? {};
+  try {
+    if (!eleve_id || !(Number(montant) > 0) || !motif || !mode) {
+      return res.status(400).json({ error: 'Élève, montant positif, motif et mode requis' });
+    }
+    if (!MODES_PAIEMENT.includes(mode)) {
+      return res.status(400).json({ error: `Mode invalide (${MODES_PAIEMENT.join(', ')})` });
+    }
+    const enfant = await enfantDuParent(req.user.id, req.user.ecole_id, eleve_id);
+    if (!enfant) return res.status(404).json({ error: 'Dossier élève introuvable pour ce compte parent' });
+
+    if (echeancier_id) {
+      const { rows: ech } = await db.query(
+        'SELECT id FROM echeanciers WHERE id = $1 AND eleve_id = $2',
+        [echeancier_id, eleve_id]
+      );
+      if (ech.length === 0) {
+        return res.status(400).json({ error: 'Échéance introuvable pour cet élève' });
+      }
+    }
+
+    const prefixe = { especes: 'CAI', cheque: 'CHQ', mobile_money: 'MM', virement: 'VIR' }[mode] || 'PAY';
+    const transactionRef = transaction_ref || `${prefixe}-${Date.now()}`;
+
+    const paiement = await creerPaiement({
+      ecoleId: req.user.ecole_id,
+      saisiPar: req.user.id,
+      eleveId: eleve_id,
+      echeancierId: echeancier_id || null,
+      montant,
+      motif,
+      mode,
+      transactionRef,
+      origine: 'portail',
+    });
+
+    // Reçu généré automatiquement (BR : paiement en ligne avec reçu automatique), archivé et téléchargeable
+    const { rows: ecoles } = await db.query('SELECT * FROM ecoles WHERE id = $1', [req.user.ecole_id]);
+    const { rows: classeRow } = await db.query(
+      'SELECT c.libelle FROM classes c WHERE c.id = $1', [enfant.classe_id]
+    );
+    const resultat = await genererRecu({
+      ecole: ecoles[0],
+      eleve: { prenom: enfant.prenom, nom: enfant.nom, matricule: enfant.matricule },
+      classe: classeRow[0] ?? null,
+      paiement,
+      echeancier: { libelle: echeancier_id ? 'Échéance associée' : null },
+    });
+    await db.query(
+      `INSERT INTO documents_generes (ecole_id, type, identifiant_unique, eleve_id, paiement_id, chemin_fichier, genere_par)
+       VALUES ($1, 'recu', $2, $3, $4, $5, $6)`,
+      [req.user.ecole_id, paiement.numero_recu, eleve_id, paiement.id, resultat.nomFichier, req.user.id]
+    );
+
+    await notifierParents(
+      eleve_id, req.user.ecole_id, 'finance',
+      `Votre paiement ${paiement.numero_recu} de ${Number(montant).toLocaleString('fr-FR')} FCFA (${mode}) a été confirmé. Reçu disponible dans le portail.`
+    );
+    await journaliserAction({
+      userId: req.user.id, action: 'paiement_en_ligne', cible: 'paiements',
+      details: { numero_recu: paiement.numero_recu, eleve_id, montant: Number(montant), mode, origine: 'portail' },
+    });
+
+    res.status(201).json({
+      paiement: { ...paiement, recu_fichier: resultat.nomFichier },
+      message: `Paiement ${paiement.numero_recu} confirmé. Le reçu est disponible dans votre portail.`,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Téléchargement des documents de ses propres enfants (bulletins, reçus, certificats)
+router.get('/documents/:nomFichier', async (req, res, next) => {
+  const nomFichier = req.params.nomFichier;
+  try {
+    const { rows } = await db.query(
+      `SELECT d.*
+       FROM documents_generes d
+       JOIN eleve_tuteurs et ON et.eleve_id = d.eleve_id
+       JOIN tuteurs t ON t.id = et.tuteur_id
+       WHERE d.chemin_fichier = $1 AND t.user_id = $2 AND t.ecole_id = $3`,
+      [nomFichier, req.user.id, req.user.ecole_id]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'Document introuvable pour vos enfants' });
+
+    const doc = rows[0];
+    res.download(cheminAbsolu(nomFichier), path.basename(nomFichier), (err) => {
+      if (err && !res.headersSent) next(err);
     });
   } catch (err) {
     next(err);

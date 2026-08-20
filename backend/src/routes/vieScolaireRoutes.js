@@ -3,6 +3,7 @@ import db from '../db/index.js';
 import { authenticate, requireRoles } from '../middleware/auth.js';
 import { withTransaction } from '../db/index.js';
 import { journaliserAction } from '../services/authService.js';
+import { notifierParents } from '../services/notificationService.js';
 
 const router = Router();
 router.use(authenticate);
@@ -13,23 +14,6 @@ const ROLES_GESTION = ['ADMIN', 'SECRETARIAT', 'CENSEUR'];
 
 const TYPES_ABSENCE = new Set(['absence', 'retard']);
 const TYPES_SANCTION = new Set(['avertissement', 'blame', 'exclusion', 'conseil_discipline']);
-
-// Notification au(x) parent(s) connecté(s) d'un élève (compte lié via tuteur)
-async function notifierParents(eleveId, ecoleId, type, message) {
-  const { rows } = await db.query(
-    `SELECT t.user_id
-     FROM eleve_tuteurs et
-     JOIN tuteurs t ON t.id = et.tuteur_id
-     WHERE et.eleve_id = $1 AND t.ecole_id = $2 AND t.user_id IS NOT NULL`,
-    [eleveId, ecoleId]
-  );
-  for (const r of rows) {
-    await db.query(
-      'INSERT INTO notifications (ecole_id, user_id, type, message) VALUES ($1, $2, $3, $4)',
-      [ecoleId, r.user_id, type, message]
-    );
-  }
-}
 
 // ---- Appel (saisie groupée par classe + date) ----
 router.post('/appel', requireRoles(...ROLES_SAISIE), async (req, res, next) => {

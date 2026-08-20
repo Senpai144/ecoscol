@@ -1,7 +1,9 @@
 import { Router } from 'express';
-import db, { withTransaction } from '../db/index.js';
+import db from '../db/index.js';
 import { authenticate, requireRoles } from '../middleware/auth.js';
 import { journaliserAction } from '../services/authService.js';
+import { notifierParents } from '../services/notificationService.js';
+import { creerPaiement, MODES_PAIEMENT } from '../services/financeService.js';
 import { genererRecu } from '../services/pdfService.js';
 
 const router = Router();
@@ -9,8 +11,6 @@ const router = Router();
 const LECTURE = ['ADMIN', 'SECRETARIAT', 'COMPTABLE'];
 const SAISIE = ['ADMIN', 'SECRETARIAT', 'COMPTABLE'];
 const CONTROLE = ['ADMIN', 'COMPTABLE'];
-
-const MODES_PAIEMENT = ['especes', 'cheque', 'mobile_money', 'virement'];
 
 router.use(authenticate);
 
@@ -192,10 +192,15 @@ router.post('/echeanciers', requireRoles(...SAISIE), async (req, res, next) => {
        VALUES ($1, $2, $3, $4, $5, $4) RETURNING *`,
       [eleve_id, annee.id, libelle, montant_du, date_echeance]
     );
+    const echeance = rows[0];
+    await notifierParents(
+      eleve_id, req.user.ecole_id, 'finance',
+      `Échéance « ${echeance.libelle} » de ${Number(montant_du).toLocaleString('fr-FR')} FCFA à régler avant le ${new Date(date_echeance).toLocaleDateString('fr-FR')}.`
+    );
     await journaliserAction({
-      userId: req.user.id, action: 'creation_echeancier', cible: 'echeanciers', details: rows[0],
+      userId: req.user.id, action: 'creation_echeancier', cible: 'echeanciers', details: echeance,
     });
-    res.status(201).json({ echeancier: rows[0] });
+    res.status(201).json({ echeancier: echeance });
   } catch (err) {
     if (err.code === '23505') {
       return res.status(409).json({ error: 'Cette échéance existe déjà pour cet élève' });
@@ -231,11 +236,6 @@ router.delete('/echeanciers/:id', requireRoles(...SAISIE), async (req, res, next
 });
 
 // ---- Paiements (BR-04 reçu unique, BR-05 non modifiable, BR-06 solde recalculé) ----
-function numeroRecuSuivant(annee, dernier) {
-  const seq = dernier ? parseInt(dernier.split('-')[2], 10) + 1 : 1;
-  return `REC-${annee}-${String(seq).padStart(4, '0')}`;
-}
-
 router.post('/paiements', requireRoles(...SAISIE), async (req, res, next) => {
   const { eleve_id, echeancier_id, montant, motif, mode, date_paiement, transaction_ref } = req.body ?? {};
   if (!eleve_id || !(Number(montant) > 0) || !motif || !mode) {
@@ -261,47 +261,30 @@ router.post('/paiements', requireRoles(...SAISIE), async (req, res, next) => {
       }
     }
 
-    const anneeCourante = new Date().getFullYear();
-    const date = date_paiement || new Date().toISOString().slice(0, 10);
-    const montantNum = Number(montant);
+    const resultat = await creerPaiement({
+      ecoleId: req.user.ecole_id,
+      saisiPar: req.user.id,
+      eleveId: eleve_id,
+      echeancierId: echeancier_id || null,
+      montant,
+      motif,
+      mode,
+      transactionRef: transaction_ref || null,
+      date: date_paiement || null,
+      origine: 'regie',
+    });
 
-    let resultat = null;
-    for (let tentative = 0; tentative < 5; tentative++) {
-      try {
-        resultat = await withTransaction(async (client) => {
-          const { rows: derniers } = await client.query(
-            `SELECT numero_recu FROM paiements
-             WHERE numero_recu LIKE $1 ORDER BY numero_recu DESC LIMIT 1`,
-            [`REC-${anneeCourante}-%`]
-          );
-          const numero = numeroRecuSuivant(anneeCourante, derniers[0]?.numero_recu);
-
-          const { rows: paiements } = await client.query(
-            `INSERT INTO paiements (ecole_id, eleve_id, echeancier_id, montant, motif, mode,
-                                    numero_recu, transaction_ref, date_paiement, saisi_par)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-             RETURNING *`,
-            [req.user.ecole_id, eleve_id, echeancier_id || null, montantNum, motif, mode, numero,
-             transaction_ref || null, date, req.user.id]
-          );
-          if (echeancier_id) {
-            await client.query(
-              `UPDATE echeanciers SET solde = GREATEST(solde - $1, 0)
-               WHERE id = $2 AND eleve_id = $3`,
-              [montantNum, echeancier_id, eleve_id]
-            );
-          }
-          return paiements[0];
-        });
-        break;
-      } catch (err) {
-        if (err.code !== '23505' || tentative === 4) throw err;
-      }
-    }
+    const { rows: infos } = await db.query(
+      'SELECT prenom, nom FROM eleves WHERE id = $1', [eleve_id]
+    );
+    await notifierParents(
+      eleve_id, req.user.ecole_id, 'finance',
+      `Paiement ${resultat.numero_recu} de ${Number(montant).toLocaleString('fr-FR')} FCFA reçu pour ${infos[0].prenom} ${infos[0].nom} (${mode}).`
+    );
 
     await journaliserAction({
       userId: req.user.id, action: 'enregistrement_paiement', cible: 'paiements',
-      details: { numero_recu: resultat.numero_recu, eleve_id, montant: montantNum },
+      details: { numero_recu: resultat.numero_recu, eleve_id, montant: Number(montant) },
     });
     res.status(201).json({ paiement: resultat });
   } catch (err) {

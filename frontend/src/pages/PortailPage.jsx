@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { apiFetch } from '../api.js';
+import { getPaiementsPortail, payerEnLigne, telechargerDocumentPortail } from '../api.portail.js';
 import './portail.css';
 
 const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
@@ -196,26 +197,157 @@ function CarteVieScolaire({ enfant }) {
   );
 }
 
-function CarteSoldes({ enfant }) {
-  const solde = enfant.solde?.reste_a_payer ?? 0;
+const fmtMontant = (n) => `${Number(n).toLocaleString('fr-FR')} FCFA`;
+
+const LIBELLES_MODES = {
+  especes: 'Espèces',
+  cheque: 'Chèque',
+  mobile_money: 'Mobile Money / Wave',
+  virement: 'Virement',
+};
+
+function CartePaiements({ enfant, token }) {
+  const [donnees, setDonnees] = useState(null);
+  const [form, setForm] = useState(null);
+  const [message, setMessage] = useState(null);
+  const [erreur, setErreur] = useState('');
+  const [chargement, setChargement] = useState(false);
+
+  const charger = async () => {
+    setErreur('');
+    try {
+      const d = await getPaiementsPortail(enfant.eleve.id);
+      setDonnees(d);
+    } catch (e) {
+      setErreur(e.message);
+    }
+  };
+
+  useEffect(() => { charger(); }, [enfant.eleve.id]);
+
+  async function payer(e) {
+    e.preventDefault();
+    setChargement(true);
+    setErreur('');
+    setMessage(null);
+    try {
+      const d = await payerEnLigne({
+        eleve_id: enfant.eleve.id,
+        echeancier_id: Number(form.echeancier_id),
+        montant: Number(form.montant),
+        motif: 'Frais de scolarité (paiement en ligne)',
+        mode: form.mode,
+        transaction_ref: form.transaction_ref || undefined,
+      });
+      setMessage(d.message);
+      if (d.paiement?.recu_fichier) {
+        telechargerDocumentPortail(d.paiement.recu_fichier).catch(() => {});
+      }
+      setForm(null);
+      charger();
+    } catch (err) {
+      setErreur(err.message);
+    } finally {
+      setChargement(false);
+    }
+  }
+
+  const reste = donnees?.resteDu ?? 0;
+  const echeances = donnees?.echeanciers ?? [];
+  const paiements = donnees?.paiements ?? [];
+
   return (
-    <div className="portail-card portail-todo" style={{ animationDelay: '0.3s' }}>
+    <div className="portail-card portail-todo portail-pay" style={{ animationDelay: '0.3s' }}>
       <div className="portail-card-header">
-        <span className="portail-card-title">Scolarité</span>
-        <span className="portail-card-link">Détail →</span>
+        <span className="portail-card-title">Paiements — {enfant.eleve.classe}</span>
+        <span className="portail-card-link">{donnees ? fmtMontant(reste) : '…'}</span>
       </div>
-      <div className="portail-subject-row">
-        <span className="portail-subject-name">Reste à payer</span>
-        <span className="portail-subject-grade mono" style={{ color: solde > 0 ? 'var(--coral)' : 'var(--teal)' }}>
-          {solde > 0 ? `${Number(solde).toLocaleString('fr-FR')} FCFA` : 'À jour ✓'}
-        </span>
-      </div>
-      <div className="portail-subject-row">
-        <span className="portail-subject-name">Dernier bulletin</span>
-        <span className="portail-subject-grade mono">
-          {enfant.bulletin ? 'Disponible ✓' : 'En attente'}
-        </span>
-      </div>
+
+      {erreur && <div className="alert alert-error" style={{ margin: '0.5rem 0' }}>{erreur}</div>}
+      {message && <div className="alert alert-ok" style={{ margin: '0.5rem 0' }}>{message}</div>}
+
+      {!donnees ? (
+        <div className="portail-empty">Chargement du solde…</div>
+      ) : echeances.length === 0 ? (
+        <div className="portail-empty">Aucun frais à régler. À jour ✓</div>
+      ) : (
+        <>
+          {echeances.map((ec) => {
+            const resteEc = Number(ec.solde);
+            return (
+              <div key={ec.id} className="portail-recu-row">
+                <div>
+                  <div className="portail-recu-label">{ec.libelle}</div>
+                  <div className="portail-recu-meta">{ec.annee_libelle} · échéance {ec.date_echeance}</div>
+                </div>
+                <div className="portail-recu-right">
+                  {resteEc > 0 ? (
+                    <>
+                      <span className="portail-recu-montant">{fmtMontant(resteEc)}</span>
+                      <button
+                        className="portail-pay-btn"
+                        onClick={() => setForm({ echeancier_id: ec.id, montant: resteEc.toFixed(0), mode: 'mobile_money', transaction_ref: '' })}
+                      >
+                        Payer en ligne
+                      </button>
+                    </>
+                  ) : (
+                    <span className="portail-pay-ok">Soldé ✓</span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+
+          {form && (
+            <form className="portail-pay-form" onSubmit={payer}>
+              <div className="portail-pay-title">
+                Paiement mobile money — reçu immédiat
+              </div>
+              <input type="number" min="1" step="1" value={form.montant} onChange={(e) => setForm({ ...form, montant: e.target.value })} required aria-label="Montant" />
+              <select value={form.mode} onChange={(e) => setForm({ ...form, mode: e.target.value })} aria-label="Mode">
+                {Object.entries(LIBELLES_MODES).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+              <input
+                type="text"
+                value={form.transaction_ref}
+                onChange={(e) => setForm({ ...form, transaction_ref: e.target.value })}
+                placeholder="Reçu du réseau (ex. OM-1234…) — facultatif"
+                aria-label="Référence transaction"
+              />
+              <button type="submit" className="portail-pay-btn portail-pay-btn-primary" disabled={chargement}>
+                {chargement ? 'Confirmation…' : `Confirmer le paiement (${fmtMontant(form.montant)})`}
+              </button>
+              <button type="button" className="portail-pay-cancel" onClick={() => setForm(null)}>Annuler</button>
+            </form>
+          )}
+
+          {paiements.length > 0 && (
+            <>
+              <div className="portail-card-header" style={{ marginTop: '0.9rem' }}>
+                <span className="portail-card-title">Historique des reçus</span>
+                <span className="portail-card-link">{paiements.length}</span>
+              </div>
+              {paiements.map((p) => (
+                <div key={p.id} className="portail-recu-row">
+                  <div>
+                    <div className="portail-recu-label mono">{p.numero_recu}</div>
+                    <div className="portail-recu-meta">{p.date_paiement} · {LIBELLES_MODES[p.mode] || p.mode} · {p.motif}</div>
+                  </div>
+                  <div className="portail-recu-right">
+                    <span className={`portail-recu-montant${p.recu_annule ? ' portail-recu-annule' : ''}`}>{fmtMontant(p.montant)}</span>
+                    {!p.recu_annule && p.recu_fichier && (
+                      <button className="portail-pay-btn" onClick={() => telechargerDocumentPortail(p.recu_fichier).catch(() => setErreur('Reçu indisponible au téléchargement'))}>
+                        Reçu PDF
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -225,6 +357,7 @@ export default function PortailPage() {
   const navigate = useNavigate();
   const [donnees, setDonnees] = useState(null);
   const [erreur, setErreur] = useState(null);
+  const [enfantId, setEnfantId] = useState(null);
 
   useEffect(() => {
     let vivant = true;
@@ -250,7 +383,7 @@ export default function PortailPage() {
     return <div className="portail"><div className="portail-loading portail-main">Chargement du portail…</div></div>;
   }
 
-  const enfant = donnees.enfants?.[0];
+  const enfant = donnees?.enfants?.find((e) => Number(e.eleve.id) === Number(enfantId)) ?? donnees?.enfants?.[0];
   const heures = `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`;
   const initiales = (enfant?.eleve.prenom?.[0] ?? 'E') + (enfant?.eleve.nom?.[0] ?? '');
 
@@ -334,6 +467,22 @@ export default function PortailPage() {
                 <span className="portail-card-link">{enfant?.eleve.classe}</span>
               </div>
               <TimelineAujourdhui creneaux={enfant?.edt} />
+            {donnees?.enfants?.length > 1 && (
+              <div className="portail-enfant-select">
+                <label htmlFor="portail-enfant">Mon enfant :</label>
+                <select
+                  id="portail-enfant"
+                  value={enfant?.eleve.id}
+                  onChange={(e) => setEnfantId(e.target.value)}
+                >
+                  {donnees.enfants.map((en) => (
+                    <option key={en.eleve.id} value={en.eleve.id}>
+                      {en.eleve.prenom} {en.eleve.nom} — {en.eleve.classe}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             </section>
 
             <section className="portail-card portail-avg" style={{ animationDelay: '0.08s' }}>
@@ -343,7 +492,7 @@ export default function PortailPage() {
             <CarteDevoirs enfant={enfant} />
             <CarteMessages enfant={enfant} />
             <CarteVieScolaire enfant={enfant} />
-            <CarteSoldes enfant={enfant} />
+            <CartePaiements enfant={enfant} token={session?.token} />
           </div>
         </div>
       </div>
