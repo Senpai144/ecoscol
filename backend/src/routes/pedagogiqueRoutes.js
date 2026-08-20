@@ -5,10 +5,13 @@ import { journaliserAction } from '../services/authService.js';
 
 const router = Router();
 
-router.use(authenticate, requireRoles('ADMIN', 'SECRETARIAT', 'CENSEUR'));
+router.use(authenticate);
+
+const ROLES_LECTURE = ['ADMIN', 'SECRETARIAT', 'CENSEUR', 'ENSEIGNANT'];
+const ROLES_ECRITURE = ['ADMIN', 'SECRETARIAT', 'CENSEUR'];
 
 // ---- Matières ----
-router.get('/matieres', async (req, res, next) => {
+router.get('/matieres', requireRoles(...ROLES_LECTURE), async (req, res, next) => {
   try {
     const { rows } = await db.query(
       'SELECT * FROM matieres WHERE ecole_id = $1 ORDER BY nom',
@@ -20,7 +23,7 @@ router.get('/matieres', async (req, res, next) => {
   }
 });
 
-router.post('/matieres', async (req, res, next) => {
+router.post('/matieres', requireRoles(...ROLES_ECRITURE), async (req, res, next) => {
   const { nom, code } = req.body ?? {};
   if (!nom) return res.status(400).json({ error: 'Nom de la matière requis' });
   try {
@@ -37,7 +40,7 @@ router.post('/matieres', async (req, res, next) => {
 });
 
 // Coefficients par matière / niveau / série (cf. schéma table coefficients)
-router.get('/matieres/:id/coefficients', async (req, res, next) => {
+router.get('/matieres/:id/coefficients', requireRoles(...ROLES_LECTURE), async (req, res, next) => {
   const id = parseInt(req.params.id, 10);
   try {
     const { rows } = await db.query(
@@ -56,7 +59,7 @@ router.get('/matieres/:id/coefficients', async (req, res, next) => {
   }
 });
 
-router.post('/matieres/:id/coefficients', async (req, res, next) => {
+router.post('/matieres/:id/coefficients', requireRoles(...ROLES_ECRITURE), async (req, res, next) => {
   const id = parseInt(req.params.id, 10);
   const { annee_scolaire_id, niveau_id, serie_id, coefficient } = req.body ?? {};
   if (!annee_scolaire_id || coefficient === undefined) {
@@ -81,7 +84,7 @@ router.post('/matieres/:id/coefficients', async (req, res, next) => {
 });
 
 // ---- Enseignants ----
-router.get('/enseignants', async (req, res, next) => {
+router.get('/enseignants', requireRoles(...ROLES_LECTURE), async (req, res, next) => {
   try {
     const { rows } = await db.query(
       `SELECT en.id, en.user_id, u.nom, u.prenom, u.identifiant, u.email, u.telephone,
@@ -101,7 +104,7 @@ router.get('/enseignants', async (req, res, next) => {
 });
 
 // Associer un compte utilisateur à un profil enseignant
-router.post('/enseignants', async (req, res, next) => {
+router.post('/enseignants', requireRoles(...ROLES_ECRITURE), async (req, res, next) => {
   const { user_id } = req.body ?? {};
   if (!user_id) return res.status(400).json({ error: 'ID utilisateur requis' });
   try {
@@ -119,7 +122,7 @@ router.post('/enseignants', async (req, res, next) => {
 });
 
 // Affectation enseignant -> classe + matière (BR-02: base des permissions de saisie de notes)
-router.post('/enseignements', async (req, res, next) => {
+router.post('/enseignements', requireRoles(...ROLES_ECRITURE), async (req, res, next) => {
   const { enseignant_id, classe_id, matiere_id } = req.body ?? {};
   if (!enseignant_id || !classe_id || !matiere_id) {
     return res.status(400).json({ error: 'Enseignant, classe et matière requis' });
@@ -157,7 +160,7 @@ router.delete('/enseignements/:id', async (req, res, next) => {
 });
 
 // ---- Emploi du temps (sans chevauchement - vérifié côté application) ----
-router.get('/emplois-du-temps', async (req, res, next) => {
+router.get('/emplois-du-temps', requireRoles(...ROLES_LECTURE), async (req, res, next) => {
   const { classe_id } = req.query;
   try {
     const conditions = ['edt.ecole_id = $1'];
@@ -188,7 +191,7 @@ function chevauche(aDebut, aFin, bDebut, bFin) {
   return aDebut < bFin && aFin > bDebut;
 }
 
-router.post('/emplois-du-temps', async (req, res, next) => {
+router.post('/emplois-du-temps', requireRoles(...ROLES_ECRITURE), async (req, res, next) => {
   const { classe_id, enseignant_id, matiere_id, jour_semaine, heure_debut, heure_fin } = req.body ?? {};
   if (!classe_id || !enseignant_id || !matiere_id || !jour_semaine || !heure_debut || !heure_fin) {
     return res.status(400).json({ error: 'Tous les champs sont requis' });

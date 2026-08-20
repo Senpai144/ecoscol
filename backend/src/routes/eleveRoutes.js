@@ -6,7 +6,10 @@ import { journaliserAction } from '../services/authService.js';
 
 const router = Router();
 
-router.use(authenticate, requireRoles('ADMIN', 'SECRETARIAT', 'CENSEUR'));
+router.use(authenticate);
+
+const ROLES_LECTURE = ['ADMIN', 'SECRETARIAT', 'CENSEUR', 'ENSEIGNANT'];
+const ROLES_ECRITURE = ['ADMIN', 'SECRETARIAT', 'CENSEUR'];
 
 const STATUTS_VALIDES = ['actif', 'transfere', 'exclu', 'diplome', 'archive'];
 
@@ -28,7 +31,7 @@ function validerDateNaissance(date) {
 }
 
 // Liste des élèves avec recherche, filtre par classe et pagination
-router.get('/', async (req, res, next) => {
+router.get('/', requireRoles(...ROLES_LECTURE), async (req, res, next) => {
   const { q, classe, statut, page = 1, limit = 50 } = req.query;
   const pageNum = Math.max(1, parseInt(page, 10) || 1);
   const limitNum = Math.min(200, Math.max(1, parseInt(limit, 10) || 50));
@@ -81,7 +84,7 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-router.get('/:id', async (req, res, next) => {
+router.get('/:id', requireRoles(...ROLES_LECTURE), async (req, res, next) => {
   const id = parseInt(req.params.id, 10);
   try {
     const { rows } = await db.query(
@@ -120,7 +123,7 @@ router.get('/:id', async (req, res, next) => {
 });
 
 // Inscription d'un nouvel élève (BR-01: matricule généré automatiquement)
-router.post('/', async (req, res, next) => {
+router.post('/', requireRoles(...ROLES_ECRITURE), async (req, res, next) => {
   const {
     nom, prenom, date_naissance, sexe, adresse,
     classe_id, tuteurs, photo_path,
@@ -202,7 +205,7 @@ router.post('/', async (req, res, next) => {
   }
 });
 
-router.patch('/:id', async (req, res, next) => {
+router.patch('/:id', requireRoles(...ROLES_ECRITURE), async (req, res, next) => {
   const id = parseInt(req.params.id, 10);
   const { nom, prenom, date_naissance, sexe, adresse, classe_id, photo_path } = req.body ?? {};
 
@@ -240,7 +243,7 @@ router.patch('/:id', async (req, res, next) => {
   }
 });
 
-router.patch('/:id/statut', async (req, res, next) => {
+router.patch('/:id/statut', requireRoles(...ROLES_ECRITURE), async (req, res, next) => {
   const id = parseInt(req.params.id, 10);
   const { statut } = req.body ?? {};
   if (!STATUTS_VALIDES.includes(statut)) {
@@ -259,7 +262,7 @@ router.patch('/:id/statut', async (req, res, next) => {
   }
 });
 
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', requireRoles(...ROLES_ECRITURE), async (req, res, next) => {
   const id = parseInt(req.params.id, 10);
   try {
     const { rows } = await db.query(
@@ -276,7 +279,7 @@ router.delete('/:id', async (req, res, next) => {
 
 // Attache un compte d'utilisateur PARENT à un tuteur d'un élève (portail parents).
 // BR-20.2 : le parent doit avoir le rôle PARENT et appartenir à la même école.
-router.post('/:id/tuteurs/:tuteurId/attacher-compte', async (req, res, next) => {
+router.post('/:id/tuteurs/:tuteurId/attacher-compte', requireRoles(...ROLES_ECRITURE), async (req, res, next) => {
   const eleveId = parseInt(req.params.id, 10);
   const tuteurId = parseInt(req.params.tuteurId, 10);
   const { user_id } = req.body ?? {};

@@ -23,7 +23,11 @@ export default function LoginPage() {
     setChargement(true);
     try {
       const user = await login(identifiant.trim(), motDePasse);
-      navigate(user.roles?.includes('PARENT') ? '/portail' : '/tableau-de-bord', { replace: true });
+      const roles = user.roles || [];
+      const accueil = roles.includes('PARENT') ? '/portail'
+        : roles.some((r) => ['ENSEIGNANT', 'SURVEILLANT'].includes(r)) ? '/vie-scolaire'
+        : '/tableau-de-bord';
+      navigate(accueil, { replace: true });
     } catch (err) {
       setErreur(err.message || 'Connexion impossible');
     } finally {

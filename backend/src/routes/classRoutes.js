@@ -5,9 +5,12 @@ import { journaliserAction } from '../services/authService.js';
 
 const router = Router();
 
-router.use(authenticate, requireRoles('ADMIN', 'SECRETARIAT', 'CENSEUR'));
+router.use(authenticate);
 
-router.get('/', async (req, res, next) => {
+const ROLES_LECTURE = ['ADMIN', 'SECRETARIAT', 'CENSEUR', 'ENSEIGNANT'];
+const ROLES_ECRITURE = ['ADMIN', 'SECRETARIAT', 'CENSEUR'];
+
+router.get('/', requireRoles(...ROLES_LECTURE), async (req, res, next) => {
   try {
     const { rows } = await db.query(
       `SELECT c.*, n.libelle AS niveau_libelle, s.libelle AS serie_libelle,
@@ -30,7 +33,7 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-router.post('/', async (req, res, next) => {
+router.post('/', requireRoles(...ROLES_ECRITURE), async (req, res, next) => {
   const { annee_scolaire_id, niveau_id, serie_id, libelle, capacite, salle } = req.body ?? {};
   if (!annee_scolaire_id || !niveau_id || !libelle || capacite === undefined) {
     return res.status(400).json({ error: 'Année scolaire, niveau, libellé et capacité requis' });
@@ -53,7 +56,7 @@ router.post('/', async (req, res, next) => {
   }
 });
 
-router.patch('/:id', async (req, res, next) => {
+router.patch('/:id', requireRoles(...ROLES_ECRITURE), async (req, res, next) => {
   const id = parseInt(req.params.id, 10);
   const { libelle, serie_id, capacite, salle } = req.body ?? {};
   try {
