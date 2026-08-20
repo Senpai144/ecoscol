@@ -24,4 +24,4 @@ docs/build/
 
 # Sauvegardes locales
 backups/
-*.sql.gz
+*.sql.gzbackend/documents/
