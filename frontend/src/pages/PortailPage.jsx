@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { apiFetch } from '../api.js';
-import { getPaiementsPortail, payerEnLigne, modifierPaiementPortail, telechargerDocumentPortail } from '../api.portail.js';
+import { getPaiementsPortail, payerEnLigne, modifierPaiementPortail } from '../api.portail.js';
 import './portail.css';
 
 const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
@@ -199,6 +199,8 @@ function CarteVieScolaire({ enfant }) {
 
 const fmtMontant = (n) => `${Number(n).toLocaleString('fr-FR')} FCFA`;
 
+const ouvrirRecu = (paiementId) => window.open(`/portail/recu/${paiementId}`, '_blank', 'noopener');
+
 const LIBELLES_MODES = {
   especes: 'Espèces',
   cheque: 'Chèque',
@@ -240,9 +242,7 @@ function CartePaiements({ enfant, token }) {
         mode: form.mode,
       });
       setMessage(d.message);
-      if (d.paiement?.recu_fichier) {
-        telechargerDocumentPortail(d.paiement.recu_fichier).catch(() => {});
-      }
+      if (d.paiement?.id) ouvrirRecu(d.paiement.id);
       setForm(null);
       charger();
     } catch (err) {
@@ -265,9 +265,7 @@ function CartePaiements({ enfant, token }) {
         transaction_ref: modification.transaction_ref,
       });
       setMessage(d.message);
-      if (d.paiement?.recu_fichier) {
-        telechargerDocumentPortail(d.paiement.recu_fichier).catch(() => {});
-      }
+      if (d.paiement?.id) ouvrirRecu(d.paiement.id);
       setModification(null);
       charger();
     } catch (err) {
@@ -400,8 +398,8 @@ function CartePaiements({ enfant, token }) {
                       </button>
                     )}
                     {!p.recu_annule && p.recu_fichier && (
-                      <button className="portail-pay-btn" onClick={() => telechargerDocumentPortail(p.recu_fichier).catch(() => setErreur('Reçu indisponible au téléchargement'))}>
-                        Reçu PDF
+                      <button className="portail-pay-btn" onClick={() => ouvrirRecu(p.id)}>
+                        Voir le reçu
                       </button>
                     )}
                   </div>

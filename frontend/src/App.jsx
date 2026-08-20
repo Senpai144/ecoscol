@@ -11,6 +11,7 @@ import ScolariteElevesPage from './pages/ScolariteElevesPage.jsx';
 import InscriptionPage from './pages/InscriptionPage.jsx';
 import FicheElevePage from './pages/FicheElevePage.jsx';
 import PortailPage from './pages/PortailPage.jsx';
+import RecuPage from './pages/RecuPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
 import VieScolairePage from './pages/VieScolairePage.jsx';
 import FinancePage from './pages/FinancePage.jsx';
@@ -187,6 +188,7 @@ export default function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/portail" element={<ProtectedRoute roles={['PARENT']}><PortailPage /></ProtectedRoute>} />
+          <Route path="/portail/recu/:paiementId" element={<ProtectedRoute roles={['PARENT']}><RecuPage /></ProtectedRoute>} />
           <Route element={<ProtectedRoute><LayoutApp /></ProtectedRoute>}>
             <Route path="/tableau-de-bord" element={<DashboardPage />} />
             <Route path="/comptes" element={<ProtectedRoute roles={['ADMIN']}><Comptes /></ProtectedRoute>} />

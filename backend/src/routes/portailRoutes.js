@@ -427,4 +427,62 @@ router.get('/documents/:nomFichier', async (req, res, next) => {
   }
 });
 
+// Données du reçu pour la page reçu imprimable/PDF du portail (scopées aux enfants du parent)
+router.get('/recus/:paiementId', async (req, res, next) => {
+  const id = parseInt(req.params.paiementId, 10);
+  try {
+    const { rows: paiements } = await db.query(
+      'SELECT * FROM paiements WHERE id = $1 AND ecole_id = $2',
+      [id, req.user.ecole_id]
+    );
+    if (paiements.length === 0) return res.status(404).json({ error: 'Paiement introuvable' });
+    const paiement = paiements[0];
+    const enfant = await enfantDuParent(req.user.id, req.user.ecole_id, paiement.eleve_id);
+    if (!enfant) return res.status(404).json({ error: 'Paiement introuvable pour vos enfants' });
+
+    const [{ rows: eleves }, { rows: ecoles }, { rows: tuteurs }] = await Promise.all([
+      db.query(
+        `SELECT e.prenom, e.nom, e.matricule, c.libelle AS classe_libelle
+         FROM eleves e LEFT JOIN classes c ON c.id = e.classe_id
+         WHERE e.id = $1`,
+        [paiement.eleve_id]
+      ),
+      db.query('SELECT nom, adresse, telephone, email, slogan FROM ecoles WHERE id = $1', [paiement.ecole_id]),
+      db.query(
+        `SELECT t.prenom, t.nom
+         FROM tuteurs t JOIN eleve_tuteurs et ON et.tuteur_id = t.id
+         WHERE et.eleve_id = $1 AND t.user_id = $2
+         LIMIT 1`,
+        [paiement.eleve_id, req.user.id]
+      ),
+    ]);
+
+    let echeancier = null;
+    if (paiement.echeancier_id) {
+      const { rows: ech } = await db.query(
+        `SELECT ec.libelle, ec.date_echeance, a.libelle AS annee_libelle
+         FROM echeanciers ec JOIN annees_scolaires a ON a.id = ec.annee_scolaire_id
+         WHERE ec.id = $1`,
+        [paiement.echeancier_id]
+      );
+      echeancier = ech[0] ?? null;
+    }
+
+    res.json({
+      paiement: {
+        id: paiement.id, numero_recu: paiement.numero_recu, montant: Number(paiement.montant),
+        mode: paiement.mode, motif: paiement.motif, transaction_ref: paiement.transaction_ref,
+        date_paiement: paiement.date_paiement, recu_annule: paiement.recu_annule,
+        date_modification: paiement.modifie_le,
+      },
+      eleve: eleves[0] ?? null,
+      echeancier,
+      ecole: ecoles[0] ?? null,
+      payePar: tuteurs[0] ? `${tuteurs[0].prenom} ${tuteurs[0].nom}` : null,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;

@@ -1,0 +1,224 @@
+.recu-page {
+  --ink: #1B2340;
+  --paper: #F3F4F7;
+  --card: #FFFFFF;
+  --line: #E4E6EC;
+  --line-strong: #D3D6DE;
+  --teal: #2B8C7E;
+  --teal-soft: #E4F1EE;
+  --amber: #D98E3F;
+  --text: #1A1F2B;
+  --text-soft: #6B7280;
+  --text-faint: #9CA3AF;
+  --radius: 14px;
+  --shadow: 0 1px 2px rgba(27,35,64,0.05), 0 10px 28px rgba(27,35,64,0.08);
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--paper);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 40px 20px 80px 20px;
+}
+.recu-page * { box-sizing: border-box; margin: 0; padding: 0; }
+.recu-page .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+.recu-page .display { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+.recu-page button { font-family: inherit; cursor: pointer; }
+
+.recu-error { max-width: 780px; margin: 3rem auto; text-align: center; color: var(--text-soft); }
+.recu-error button { background: var(--teal); color: #fff; border: none; border-radius: 8px; padding: 8px 14px; margin-left: 8px; font-size: 0.85rem; font-weight: 600; }
+
+/* ---------- TOOLBAR (hors impression) ---------- */
+.recu-page .toolbar {
+  max-width: 780px;
+  margin: 0 auto 20px auto;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.recu-page .toolbar-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.1rem; color: var(--ink); }
+.recu-page .toolbar-hint { font-size: 0.8rem; color: var(--text-soft); margin-top: 2px; }
+.recu-page .toolbar-actions { display: flex; gap: 10px; }
+.recu-page .btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 16px; border-radius: 10px; border: none;
+  font-size: 0.86rem; font-weight: 600;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.recu-page .btn svg { width: 15px; height: 15px; }
+.recu-page .btn-primary { background: var(--teal); color: #fff; }
+.recu-page .btn-primary:hover { background: #256F63; }
+.recu-page .btn-ghost { background: var(--card); color: var(--text); border: 1.5px solid var(--line-strong); }
+.recu-page .btn-ghost:hover { border-color: var(--teal); color: var(--teal); }
+
+/* ---------- RECEIPT SHEET ---------- */
+.recu-page .sheet {
+  max-width: 780px;
+  margin: 0 auto;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 44px 48px;
+}
+.recu-page .sheet-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 24px;
+  border-bottom: 2px solid var(--ink);
+}
+.recu-page .school-block { display: flex; gap: 14px; align-items: flex-start; }
+.recu-page .logo-upload {
+  width: 68px; height: 68px; border-radius: 12px;
+  background: var(--teal-soft);
+  border: 1.5px dashed rgba(43,140,126,0.4);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.15s ease;
+}
+.recu-page .logo-upload:hover { border-color: var(--teal); }
+.recu-page .logo-upload img { width: 100%; height: 100%; object-fit: contain; }
+.recu-page .logo-upload input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.recu-page .logo-upload svg { width: 22px; height: 22px; color: var(--teal); }
+.recu-page .logo-hint {
+  position: absolute; bottom: 2px; left: 0; right: 0;
+  text-align: center; font-size: 0.5rem; color: var(--teal); font-weight: 600;
+  pointer-events: none;
+}
+.recu-page .school-info [contenteditable] { outline: none; border-radius: 4px; padding: 1px 3px; margin: -1px -3px; }
+.recu-page .school-info [contenteditable]:hover { background: var(--teal-soft); }
+.recu-page .school-info [contenteditable]:focus { background: var(--teal-soft); box-shadow: 0 0 0 2px var(--teal); }
+.recu-page .school-name { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.2rem; color: var(--ink); }
+.recu-page .school-meta { font-size: 0.78rem; color: var(--text-soft); margin-top: 3px; line-height: 1.5; }
+.recu-page .receipt-tag { text-align: right; flex-shrink: 0; }
+.recu-page .receipt-tag-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--teal); }
+.recu-page .receipt-tag-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.55rem; color: var(--ink); margin-top: 2px; }
+.recu-page .receipt-tag-num { font-size: 0.8rem; color: var(--text-soft); margin-top: 6px; }
+.recu-page .receipt-tag-num span[contenteditable] { outline: none; border-bottom: 1px dashed var(--line-strong); }
+
+/* ---------- META GRID ---------- */
+.recu-page .meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px 24px;
+  padding: 24px 0;
+  border-bottom: 1px solid var(--line);
+}
+.recu-page .meta-field label {
+  display: block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--text-faint); margin-bottom: 5px;
+}
+.recu-page .meta-field [contenteditable] {
+  font-size: 0.92rem; font-weight: 500; color: var(--text);
+  outline: none; border-bottom: 1px solid var(--line-strong); padding-bottom: 4px;
+  transition: border-color 0.15s ease;
+}
+.recu-page .meta-field [contenteditable]:hover { border-color: var(--teal); }
+.recu-page .meta-field [contenteditable]:focus { border-color: var(--teal); }
+
+/* ---------- TABLE ---------- */
+.recu-page .items { margin-top: 26px; }
+.recu-page table { width: 100%; border-collapse: collapse; }
+.recu-page thead th {
+  text-align: left; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--text-faint);
+  padding: 0 0 10px 0;
+  border-bottom: 1.5px solid var(--ink);
+}
+.recu-page thead th.num { text-align: right; }
+.recu-page tbody td {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.9rem;
+  vertical-align: top;
+}
+.recu-page tbody td.num { text-align: right; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-weight: 600; }
+.recu-page tbody td[contenteditable] { outline: none; border-radius: 4px; }
+.recu-page tbody td[contenteditable]:hover { background: var(--teal-soft); }
+.recu-page tbody td[contenteditable]:focus { background: var(--teal-soft); }
+.recu-page .recu-td-ligne { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.recu-page .item-desc-sub { font-size: 0.76rem; color: var(--text-faint); margin-top: 2px; }
+.recu-page .row-remove {
+  width: 22px; height: 22px; border-radius: 6px; border: none; background: transparent;
+  color: var(--text-faint); display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.recu-page .row-remove:hover { background: #FBE9E6; color: var(--amber); }
+.recu-page .row-remove svg { width: 14px; height: 14px; }
+.recu-page .add-row {
+  margin-top: 12px;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 0.82rem; font-weight: 600; color: var(--teal);
+  background: transparent; border: none;
+}
+.recu-page .add-row svg { width: 14px; height: 14px; }
+.recu-page .add-row:hover { text-decoration: underline; }
+
+.recu-page .totals {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1.5px solid var(--ink);
+  display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+}
+.recu-page .total-row { display: flex; justify-content: space-between; gap: 40px; width: 260px; font-size: 0.88rem; color: var(--text-soft); }
+.recu-page .total-row.grand { font-size: 1.15rem; font-weight: 700; color: var(--ink); padding-top: 8px; border-top: 1px dashed var(--line-strong); }
+.recu-page .total-row .num { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+.recu-page .amount-words {
+  margin-top: 22px;
+  padding: 14px 16px;
+  background: var(--teal-soft);
+  border-radius: 10px;
+  font-size: 0.85rem;
+  color: #1F6E63;
+}
+.recu-page .amount-words strong { font-weight: 700; }
+.recu-page .amount-words [contenteditable] { outline: none; }
+.recu-page .amount-words [contenteditable]:focus { background: #fff; border-radius: 4px; padding: 1px 3px; }
+
+/* ---------- FOOTER ---------- */
+.recu-page .receipt-footer {
+  margin-top: 34px;
+  display: flex; justify-content: space-between; align-items: flex-end;
+  gap: 24px;
+}
+.recu-page .payment-mode { font-size: 0.82rem; color: var(--text-soft); }
+.recu-page .payment-mode label {
+  display: block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--text-faint); margin-bottom: 6px;
+}
+.recu-page .mode-pills { display: flex; gap: 8px; }
+.recu-page .mode-pill {
+  padding: 6px 12px; border-radius: 999px; font-size: 0.78rem; font-weight: 600;
+  border: 1.5px solid var(--line-strong); color: var(--text-soft);
+  background: transparent;
+  transition: all 0.15s ease;
+}
+.recu-page .mode-pill.active { background: var(--teal); border-color: var(--teal); color: #fff; }
+.recu-page .payment-ref { margin-top: 10px; font-size: 0.76rem; color: var(--text-faint); }
+.recu-page .signature-block { text-align: center; }
+.recu-page .signature-line { width: 170px; border-bottom: 1.5px solid var(--text); margin-bottom: 6px; height: 52px; }
+.recu-page .signature-label { font-size: 0.74rem; color: var(--text-soft); }
+.recu-page .sheet-bottom-note {
+  margin-top: 30px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--line-strong);
+  font-size: 0.72rem; color: var(--text-faint); text-align: center;
+  line-height: 1.5;
+}
+
+/* ---------- PRINT ---------- */
+@media print {
+  .recu-page { background: #fff; padding: 0; }
+  .recu-page .toolbar { display: none; }
+  .recu-page .sheet { box-shadow: none; border-radius: 0; max-width: 100%; padding: 20px 8px; }
+  .recu-page .logo-upload { border-style: solid; }
+  .recu-page .row-remove, .recu-page .add-row { display: none; }
+  .recu-page [contenteditable]:hover, .recu-page [contenteditable]:focus { background: transparent !important; box-shadow: none !important; }
+}
+
+@media (max-width: 640px) {
+  .recu-page .sheet { padding: 28px 20px; }
+  .recu-page .sheet-header { flex-direction: column; }
+  .recu-page .receipt-tag { text-align: left; }
+  .recu-page .meta-grid { grid-template-columns: 1fr 1fr; }
+  .recu-page .receipt-footer { flex-direction: column; align-items: flex-start; gap: 24px; }
+}

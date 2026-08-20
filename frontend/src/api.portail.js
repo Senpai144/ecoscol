@@ -14,6 +14,10 @@ export async function modifierPaiementPortail(paiementId, data) {
   return apiFetch(`/api/portail/paiements/${paiementId}`, { method: 'PATCH', body: data, token: token() });
 }
 
+export async function getRecuPortail(paiementId) {
+  return apiFetch(`/api/portail/recus/${paiementId}`, { token: token() });
+}
+
 export function telechargerDocumentPortail(nomFichier) {
   return fetch(`/api/portail/documents/${encodeURIComponent(nomFichier)}`, {
     headers: { Authorization: `Bearer ${token()}` },
