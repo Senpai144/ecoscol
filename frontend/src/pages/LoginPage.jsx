@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import BandeauStatutServeur from '../components/BandeauStatutServeur.jsx';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -31,7 +32,9 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="auth-page">
+    <>
+      <BandeauStatutServeur />
+      <main className="auth-page">
       <form className="auth-card" onSubmit={handleSubmit} noValidate>
         <h1>ECOSCOL</h1>
         <p className="auth-subtitle">Plateforme de gestion scolaire</p>
@@ -66,5 +69,6 @@ export default function LoginPage() {
         </p>
       </form>
     </main>
+    </>
   );
 }

@@ -1,0 +1,595 @@
+<!doctype html>
+<!-- ============================================================
+     MAQUETTE DE RÉFÉRENCE — Portail élève (thème clair)
+     Source: template "Cursus" fourni par le porteur de projet.
+     NE PAS REPRODUIRE LES DONNÉES SIMULÉES EN PRODUCTION.
+     Cahier des charges §2.2 et §12 : les chiffres affichés DOIVENT
+     provenir de l'API (moyennes, notes, absences, emploi du temps).
+     À intégrer avec Tailwind ou CSS-in-JS lors de la phase UI.
+     ============================================================ -->
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECOSCOL — Espace élève (maquette)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink: #1B2340;
+    --ink-soft: #2A3358;
+    --paper: #F3F4F7;
+    --card: #FFFFFF;
+    --line: #E4E6EC;
+    --teal: #2B8C7E;
+    --teal-soft: #E4F1EE;
+    --amber: #D98E3F;
+    --amber-soft: #FBEEDD;
+    --coral: #C4553F;
+    --coral-soft: #F7E7E3;
+    --text: #1A1F2B;
+    --text-soft: #6B7280;
+    --text-faint: #9CA3AF;
+    --radius: 14px;
+    --shadow: 0 1px 2px rgba(27,35,64,0.04), 0 8px 24px rgba(27,35,64,0.06);
+    --shadow-hover: 0 4px 10px rgba(27,35,64,0.06), 0 16px 32px rgba(27,35,64,0.10);
+    font-size: 16px;
+  }
+
+  *{ box-sizing: border-box; margin:0; padding:0; }
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+
+  body{
+    font-family: 'Inter', sans-serif;
+    background: var(--paper);
+    color: var(--text);
+    display:flex;
+    min-height:100vh;
+  }
+
+  a{ color:inherit; text-decoration:none; }
+  button{ font-family:inherit; cursor:pointer; }
+
+  .mono{ font-family:'IBM Plex Mono', monospace; }
+  .display{ font-family:'Space Grotesk', sans-serif; }
+
+  /* ---------- SIDEBAR ---------- */
+  .sidebar{
+    width: 236px;
+    flex-shrink:0;
+    background: var(--ink);
+    color: #EDEFF6;
+    display:flex;
+    flex-direction:column;
+    padding: 24px 16px;
+    position: sticky;
+    top:0;
+    height:100vh;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding: 4px 8px 28px 8px;
+  }
+  .brand-mark{
+    width:32px; height:32px;
+    border-radius:9px;
+    background: linear-gradient(135deg, var(--teal), #1F6E63);
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .brand-mark svg{ width:18px; height:18px; }
+  .brand-name{ font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:1.15rem; letter-spacing:-0.01em; }
+
+  .nav{ display:flex; flex-direction:column; gap:2px; flex:1; }
+  .nav-item{
+    display:flex; align-items:center; gap:12px;
+    padding: 11px 12px;
+    border-radius: 10px;
+    color: #B7BEDA;
+    font-size: 0.92rem;
+    font-weight:500;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .nav-item svg{ width:18px; height:18px; flex-shrink:0; opacity:0.9; }
+  .nav-item:hover{ background: rgba(255,255,255,0.06); color:#fff; }
+  .nav-item.active{ background: rgba(43,140,126,0.22); color:#fff; }
+  .nav-item.active svg{ color: #6FC9BA; }
+
+  .nav-section-label{
+    font-size:0.68rem;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color: #6B7396;
+    padding: 18px 12px 6px 12px;
+    font-weight:600;
+  }
+
+  .sidebar-footer{
+    display:flex; align-items:center; gap:10px;
+    padding: 12px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    margin-top: 8px;
+  }
+  .avatar{
+    width:34px; height:34px; border-radius:50%;
+    background: linear-gradient(135deg, var(--amber), #B5702B);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:0.8rem; color:#1B2340;
+    flex-shrink:0;
+  }
+  .sidebar-footer-text{ line-height:1.25; }
+  .sidebar-footer-name{ font-size:0.85rem; font-weight:600; color:#fff; }
+  .sidebar-footer-role{ font-size:0.74rem; color:#9098BC; }
+
+  /* ---------- MAIN ---------- */
+  .main{ flex:1; min-width:0; display:flex; flex-direction:column; }
+
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 18px 32px;
+    border-bottom: 1px solid var(--line);
+    background: var(--paper);
+    position: sticky; top:0; z-index:5;
+  }
+  .search{
+    display:flex; align-items:center; gap:8px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 9px 14px;
+    width: 320px;
+    color: var(--text-faint);
+  }
+  .search svg{ width:16px; height:16px; flex-shrink:0; }
+  .search input{
+    border:none; outline:none; background:transparent;
+    font-family:'Inter',sans-serif; font-size:0.88rem; color:var(--text); width:100%;
+  }
+  .topbar-right{ display:flex; align-items:center; gap:18px; }
+  .icon-btn{
+    position:relative;
+    width:38px; height:38px; border-radius:10px;
+    background: var(--card); border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center;
+    color: var(--ink-soft);
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
+  }
+  .icon-btn:hover{ box-shadow: var(--shadow-hover); transform: translateY(-1px); }
+  .icon-btn svg{ width:17px; height:17px; }
+  .badge-dot{
+    position:absolute; top:-3px; right:-3px;
+    width:16px; height:16px; border-radius:50%;
+    background: var(--coral); color:#fff;
+    font-size:0.62rem; font-weight:700;
+    display:flex; align-items:center; justify-content:center;
+    border: 2px solid var(--paper);
+  }
+
+  .content{
+    padding: 28px 32px 48px 32px;
+    max-width: 1280px;
+  }
+
+  .page-head{ margin-bottom: 22px; }
+  .eyebrow{
+    font-size:0.75rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase;
+    color: var(--teal);
+    margin-bottom: 6px;
+  }
+  .page-title{ font-family:'Space Grotesk',sans-serif; font-size:1.7rem; font-weight:700; letter-spacing:-0.01em; }
+  .page-sub{ color: var(--text-soft); font-size:0.92rem; margin-top:4px; }
+
+  /* ---------- GRID ---------- */
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 18px;
+  }
+  .card{
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 22px;
+    opacity:0;
+    transform: translateY(10px);
+    animation: rise 0.5s ease forwards;
+  }
+  .card:hover{ box-shadow: var(--shadow-hover); }
+  @keyframes rise{ to{ opacity:1; transform:none; } }
+
+  .card-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .card-title{ font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:1rem; }
+  .card-link{ font-size:0.82rem; color: var(--teal); font-weight:600; }
+  .card-link:hover{ text-decoration:underline; }
+
+  /* ---- Signature card: today timeline ---- */
+  .today-card{ grid-column: span 8; }
+  .today-meta{ display:flex; align-items:baseline; gap:10px; }
+  .today-date{ color: var(--text-soft); font-size:0.86rem; }
+
+  .timeline{
+    position: relative;
+    display:flex;
+    gap: 10px;
+    margin-top: 4px;
+    padding-top: 6px;
+  }
+  .timeline-track{
+    position:absolute;
+    top: 30px; left:0; right:0;
+    height: 3px;
+    background: var(--line);
+    border-radius: 3px;
+  }
+  .timeline-progress{
+    position:absolute;
+    top: 30px; left:0;
+    height:3px;
+    background: linear-gradient(90deg, var(--teal), #52B3A2);
+    border-radius: 3px;
+    transition: width 0.6s ease;
+  }
+  .timeline-now{
+    position:absolute;
+    top: 22px;
+    width: 12px; height:12px;
+    border-radius:50%;
+    background: var(--teal);
+    box-shadow: 0 0 0 4px var(--teal-soft);
+    transform: translateX(-6px);
+    transition: left 0.6s ease;
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{ box-shadow: 0 0 0 4px var(--teal-soft); }
+    50%{ box-shadow: 0 0 0 7px var(--teal-soft); }
+  }
+
+  .period{
+    flex:1;
+    min-width:0;
+    padding-top: 48px;
+    position:relative;
+  }
+  .period-time{ font-family:'IBM Plex Mono',monospace; font-size:0.72rem; color: var(--text-faint); margin-bottom:8px; }
+  .period-card{
+    border-radius:10px;
+    padding: 10px 10px 12px 10px;
+    background: #FAFAFB;
+    border: 1px solid var(--line);
+    min-height: 84px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .period:hover .period-card{ transform: translateY(-2px); box-shadow: var(--shadow); }
+  .period-card.now{
+    background: var(--teal-soft);
+    border-color: rgba(43,140,126,0.3);
+  }
+  .period-subject{ font-weight:600; font-size:0.84rem; line-height:1.25; }
+  .period-room{ font-size:0.74rem; color: var(--text-soft); margin-top:4px; }
+  .period-tag{
+    display:inline-block; margin-top:8px;
+    font-size:0.65rem; font-weight:700; letter-spacing:0.03em;
+    padding:2px 7px; border-radius:5px;
+    background: var(--teal); color:#fff;
+  }
+  .period-card.now .period-tag{ background: var(--ink); }
+
+  /* ---- Averages card ---- */
+  .avg-card{ grid-column: span 4; grid-row: span 2; }
+  .avg-hero{ display:flex; align-items:baseline; gap:8px; margin-bottom:18px; }
+  .avg-hero-num{ font-family:'Space Grotesk',sans-serif; font-size:2.4rem; font-weight:700; letter-spacing:-0.02em; }
+  .avg-hero-label{ color: var(--text-soft); font-size:0.85rem; }
+  .subject-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 9px 0;
+    border-top: 1px solid var(--line);
+    font-size:0.86rem;
+  }
+  .subject-row:first-of-type{ border-top:none; }
+  .subject-name{ font-weight:500; }
+  .subject-right{ display:flex; align-items:center; gap:8px; }
+  .subject-grade{ font-family:'IBM Plex Mono',monospace; font-weight:600; }
+  .trend{ width:14px; height:14px; }
+  .trend.up{ color: var(--teal); }
+  .trend.down{ color: var(--coral); }
+  .trend.flat{ color: var(--text-faint); }
+
+  /* ---- Homework card ---- */
+  .todo-card{ grid-column: span 5; }
+  .todo-item{
+    display:flex; align-items:flex-start; gap:12px;
+    padding: 11px 0;
+    border-top: 1px solid var(--line);
+  }
+  .todo-item:first-of-type{ border-top:none; }
+  .checkbox{
+    width:18px; height:18px; border-radius:6px;
+    border: 1.5px solid #C7CBD6;
+    flex-shrink:0; margin-top:2px;
+    display:flex; align-items:center; justify-content:center;
+    transition: all 0.15s ease;
+  }
+  .checkbox:hover{ border-color: var(--teal); }
+  .todo-text{ font-size:0.86rem; font-weight:500; line-height:1.35; }
+  .todo-meta{ display:flex; gap:8px; align-items:center; margin-top:5px; }
+  .pill{
+    font-size:0.68rem; font-weight:600; padding:2px 8px; border-radius:20px;
+  }
+  .pill.due-soon{ background: var(--coral-soft); color: var(--coral); }
+  .pill.due-later{ background: var(--paper); color: var(--text-soft); }
+
+  /* ---- Messages card ---- */
+  .msg-card{ grid-column: span 7; }
+  .msg-item{
+    display:flex; gap:12px;
+    padding: 12px 0;
+    border-top: 1px solid var(--line);
+  }
+  .msg-item:first-of-type{ border-top:none; }
+  .msg-avatar{
+    width:34px; height:34px; border-radius:50%; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:0.72rem;
+    background: var(--amber-soft); color:#96601F;
+  }
+  .msg-body{ flex:1; min-width:0; }
+  .msg-top{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .msg-sender{ font-weight:600; font-size:0.85rem; }
+  .msg-time{ font-size:0.72rem; color: var(--text-faint); flex-shrink:0; }
+  .msg-preview{ font-size:0.82rem; color: var(--text-soft); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .unread-dot{ width:7px; height:7px; border-radius:50%; background: var(--teal); flex-shrink:0; margin-top:6px; }
+
+  /* ---- Vie scolaire card ---- */
+  .vs-card{ grid-column: span 12; }
+  .vs-row{ display:flex; gap: 14px; }
+  .vs-stat{
+    flex:1;
+    background: var(--paper);
+    border-radius: 10px;
+    padding: 16px 18px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .vs-stat-num{ font-family:'Space Grotesk',sans-serif; font-size:1.6rem; font-weight:700; }
+  .vs-stat-label{ font-size:0.8rem; color: var(--text-soft); margin-top:2px; }
+  .vs-icon{ width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; }
+  .vs-icon svg{ width:17px; height:17px; }
+
+  /* stagger */
+  .today-card{ animation-delay: 0.02s; }
+  .avg-card{ animation-delay: 0.08s; }
+  .todo-card{ animation-delay: 0.14s; }
+  .msg-card{ animation-delay: 0.2s; }
+  .vs-card{ animation-delay: 0.26s; }
+
+  /* focus visibility */
+  a:focus-visible, button:focus-visible, .checkbox:focus-visible{
+    outline: 2px solid var(--teal);
+    outline-offset: 2px;
+  }
+
+  /* ---------- RESPONSIVE ---------- */
+  @media (max-width: 1080px){
+    .today-card{ grid-column: span 12; }
+    .avg-card{ grid-column: span 6; grid-row: auto; }
+    .todo-card{ grid-column: span 6; }
+    .msg-card{ grid-column: span 12; }
+  }
+
+  @media (max-width: 760px){
+    body{ flex-direction: column; }
+    .sidebar{
+      position: fixed; bottom:0; left:0; right:0; top:auto;
+      height:auto; width:100%;
+      flex-direction:row; align-items:center;
+      padding: 8px 10px;
+      z-index: 20;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+    .brand, .sidebar-footer, .nav-section-label{ display:none; }
+    .nav{ flex-direction:row; justify-content:space-around; flex:1; }
+    .nav-item span{ display:none; }
+    .nav-item{ padding:9px; }
+    .content{ padding: 20px 16px 88px 16px; }
+    .topbar{ padding: 14px 16px; }
+    .search{ width: 100%; }
+    .search span.hint{ display:none; }
+    .avg-card, .todo-card, .msg-card{ grid-column: span 12; }
+    .timeline{ overflow-x:auto; padding-bottom:6px; }
+    .period{ min-width: 108px; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M12 3 2 8l10 5 10-5-10-5Z"/><path d="M6 10.5V16c0 1.5 2.7 3 6 3s6-1.5 6-3v-5.5"/></svg>
+      </div>
+      <span class="brand-name">ECOSCOL</span>
+    </div>
+
+    <nav class="nav">
+      <a class="nav-item active" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+        <span>Accueil</span>
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>
+        <span>Emploi du temps</span>
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5a2 2 0 0 1 2-2h11l3 3v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M8 8h8M8 13h5"/></svg>
+        <span>Notes</span>
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        <span>Devoirs</span>
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg>
+        <span>Messagerie</span>
+      </a>
+
+      <div class="nav-section-label">Suivi</div>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        <span>Vie scolaire</span>
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6"/></svg>
+        <span>Documents</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="avatar">LM</div>
+      <div class="sidebar-footer-text">
+        <div class="sidebar-footer-name">Élève connecté</div>
+        <div class="sidebar-footer-role">[Classe]</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" placeholder="Rechercher un cours, un devoir, un message…">
+      </div>
+      <div class="topbar-right">
+        <button class="icon-btn" aria-label="Notifications">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+          <span class="badge-dot">2</span>
+        </button>
+        <button class="icon-btn" aria-label="Paramètres">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="page-head">
+        <div class="eyebrow" id="eyebrow-date">Aujourd'hui</div>
+        <h1 class="page-title">Bonjour 👋</h1>
+        <p class="page-sub">Voici où tu en es aujourd'hui — cours, devoirs et messages.</p>
+      </div>
+
+      <div class="grid">
+
+        <!-- SIGNATURE CARD: today timeline -->
+        <section class="card today-card">
+          <div class="card-header">
+            <div class="today-meta">
+              <span class="card-title">Aujourd'hui</span>
+              <span class="today-date mono" id="clock">--:--</span>
+            </div>
+            <a class="card-link" href="#">Semaine complète →</a>
+          </div>
+
+          <div class="timeline" id="timeline">
+            <div class="timeline-track"></div>
+            <div class="timeline-progress" id="progress"></div>
+            <div class="timeline-now" id="nowDot"></div>
+
+            <!-- Créneaux dynamiques depuis la table emplois_du_temps -->
+            <p style="color:var(--text-faint)">Aucun cours aujourd'hui.</p>
+          </div>
+        </section>
+
+        <!-- AVERAGES -->
+        <section class="card avg-card">
+          <div class="card-header">
+            <span class="card-title">Moyennes</span>
+            <a class="card-link" href="#">Détail →</a>
+          </div>
+          <div class="avg-hero">
+            <span class="avg-hero-num">—</span>
+            <span class="avg-hero-label">/ 20 — moyenne générale</span>
+          </div>
+          <!-- Moyennes par matière depuis l'API (phase 3 Notes/Bulletins) -->
+        </section>
+
+        <!-- HOMEWORK -->
+        <section class="card todo-card">
+          <div class="card-header">
+            <span class="card-title">À faire</span>
+            <a class="card-link" href="#">Tout voir →</a>
+          </div>
+          <p style="color:var(--text-faint);font-size:0.85rem">Devoirs du cahier de texte depuis l'API (phase 4).</p>
+        </section>
+
+        <!-- MESSAGES -->
+        <section class="card msg-card">
+          <div class="card-header">
+            <span class="card-title">Messagerie</span>
+            <a class="card-link" href="#">Boîte de réception →</a>
+          </div>
+          <p style="color:var(--text-faint);font-size:0.85rem">Notifications internes (phase 6/7).</p>
+        </section>
+
+        <!-- VIE SCOLAIRE -->
+        <section class="card vs-card">
+          <div class="card-header">
+            <span class="card-title">Vie scolaire — ce trimestre</span>
+            <a class="card-link" href="#">Historique →</a>
+          </div>
+          <div class="vs-row">
+            <div class="vs-stat">
+              <div>
+                <div class="vs-stat-num">0</div>
+                <div class="vs-stat-label">Absence(s)</div>
+              </div>
+            </div>
+            <div class="vs-stat">
+              <div>
+                <div class="vs-stat-num">0</div>
+                <div class="vs-stat-label">Retard(s)</div>
+              </div>
+            </div>
+            <div class="vs-stat">
+              <div>
+                <div class="vs-stat-num">0</div>
+                <div class="vs-stat-label">Sanction(s)</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Maquette: horloge de démonstration. En production: heure réelle + données API.
+  const DEMO_HOUR = 10.75;
+  function currentHour(){
+    if (DEMO_HOUR !== null) return DEMO_HOUR;
+    const d = new Date();
+    return d.getHours() + d.getMinutes() / 60;
+  }
+  function formatClock(h){
+    const hh = Math.floor(h);
+    const mm = Math.round((h - hh) * 60);
+    return String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0');
+  }
+  function layoutTimeline(){
+    const timeline = document.getElementById('timeline');
+    const periods = Array.from(timeline.querySelectorAll('.period'));
+    document.getElementById('clock').textContent = formatClock(currentHour()) + ' — en cours';
+  }
+  window.addEventListener('load', layoutTimeline);
+  window.addEventListener('resize', layoutTimeline);
+</script>
+
+</body>
+</html>

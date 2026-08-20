@@ -1,0 +1,228 @@
+/* ===== Portail Cursus — design clair ===== */
+.portail {
+  --ink: #1B2340;
+  --ink-soft: #2A3358;
+  --paper: #F3F4F7;
+  --card: #FFFFFF;
+  --line: #E4E6EC;
+  --teal: #2B8C7E;
+  --teal-soft: #E4F1EE;
+  --amber: #D98E3F;
+  --amber-soft: #FBEEDD;
+  --coral: #C4553F;
+  --coral-soft: #F7E7E3;
+  --text: #1A1F2B;
+  --text-soft: #6B7280;
+  --text-faint: #9CA3AF;
+  --radius: 14px;
+  --shadow: 0 1px 2px rgba(27,35,64,0.04), 0 8px 24px rgba(27,35,64,0.06);
+  --shadow-hover: 0 4px 10px rgba(27,35,64,0.06), 0 16px 32px rgba(27,35,64,0.10);
+  display: flex;
+  min-height: 100vh;
+  background: var(--paper);
+  color: var(--text);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.portail * { box-sizing: border-box; margin: 0; padding: 0; }
+.portail a { color: inherit; text-decoration: none; }
+.portail button { font-family: inherit; cursor: pointer; }
+
+.portail .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+.portail .display { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+
+/* ---------- SIDEBAR ---------- */
+.portail-sidebar {
+  width: 236px;
+  flex-shrink: 0;
+  background: var(--ink);
+  color: #EDEFF6;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 16px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+.portail-brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 28px 8px; }
+.portail-brand-mark {
+  width: 32px; height: 32px; border-radius: 9px;
+  background: linear-gradient(135deg, var(--teal), #1F6E63);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.portail-brand-name { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.15rem; letter-spacing: -0.01em; }
+
+.portail-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.portail-nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 12px; border-radius: 10px;
+  color: #B7BEDA; font-size: 0.92rem; font-weight: 500;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.portail-nav-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
+.portail-nav-item.active { background: rgba(43,140,126,0.22); color: #fff; }
+.portail-nav-label {
+  font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em;
+  color: #6B7396; padding: 18px 12px 6px 12px; font-weight: 600;
+}
+
+.portail-sidebar-footer {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px; border-top: 1px solid rgba(255,255,255,0.08); margin-top: 8px;
+}
+.portail-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--amber), #B5702B);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 0.8rem; color: #1B2340;
+  flex-shrink: 0;
+}
+.portail-sidebar-footer-text { line-height: 1.25; }
+.portail-sidebar-name { font-size: 0.85rem; font-weight: 600; color: #fff; }
+.portail-sidebar-role { font-size: 0.74rem; color: #9098BC; }
+
+/* ---------- MAIN ---------- */
+.portail-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.portail-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 32px; border-bottom: 1px solid var(--line);
+  background: var(--paper); position: sticky; top: 0; z-index: 5;
+}
+.portail-topbar-right { display: flex; align-items: center; gap: 12px; }
+
+.portail-content { padding: 28px 32px 48px 32px; max-width: 1280px; width: 100%; }
+
+.portail-page-head { margin-bottom: 22px; }
+.portail-eyebrow {
+  font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--teal); margin-bottom: 6px;
+}
+.portail-page-title { font-family: 'Space Grotesk', sans-serif; font-size: 1.7rem; font-weight: 700; letter-spacing: -0.01em; }
+.portail-page-sub { color: var(--text-soft); font-size: 0.92rem; margin-top: 4px; }
+
+/* ---------- GRID ---------- */
+.portail-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 18px; }
+.portail-card {
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px;
+  animation: portail-rise 0.5s ease forwards;
+}
+@keyframes portail-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.portail-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.portail-card-title { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 1rem; }
+.portail-card-link { font-size: 0.82rem; color: var(--teal); font-weight: 600; }
+
+/* ---- Today timeline ---- */
+.portail-today { grid-column: span 8; }
+.portail-today-meta { display: flex; align-items: baseline; gap: 10px; }
+.portail-today-date { color: var(--text-soft); font-size: 0.86rem; }
+.portail-timeline { position: relative; display: flex; gap: 10px; margin-top: 4px; padding-top: 6px; }
+.portail-timeline-track {
+  position: absolute; top: 30px; left: 0; right: 0; height: 3px;
+  background: var(--line); border-radius: 3px;
+}
+.portail-timeline-progress {
+  position: absolute; top: 30px; left: 0; height: 3px;
+  background: linear-gradient(90deg, var(--teal), #52B3A2); border-radius: 3px;
+  transition: width 0.6s ease;
+}
+.portail-timeline-now {
+  position: absolute; top: 22px; width: 12px; height: 12px; border-radius: 50%;
+  background: var(--teal); box-shadow: 0 0 0 4px var(--teal-soft);
+  transform: translateX(-6px); transition: left 0.6s ease;
+  animation: portail-pulse 2.4s ease-in-out infinite;
+}
+@keyframes portail-pulse {
+  0%, 100% { box-shadow: 0 0 0 4px var(--teal-soft); }
+  50% { box-shadow: 0 0 0 7px var(--teal-soft); }
+}
+.portail-period { flex: 1; min-width: 0; padding-top: 48px; position: relative; }
+.portail-period-time { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--text-faint); margin-bottom: 8px; }
+.portail-period-card {
+  border-radius: 10px; padding: 10px;
+  background: #FAFAFB; border: 1px solid var(--line); min-height: 64px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.portail-period-card.now { background: var(--teal-soft); border-color: rgba(43,140,126,0.3); }
+.portail-period-subject { font-weight: 600; font-size: 0.84rem; line-height: 1.25; }
+.portail-period-room { font-size: 0.74rem; color: var(--text-soft); margin-top: 4px; }
+
+/* ---- Averages ---- */
+.portail-avg { grid-column: span 4; grid-row: span 2; }
+.portail-avg-hero { display: flex; align-items: baseline; gap: 8px; margin-bottom: 18px; }
+.portail-avg-hero-num { font-family: 'Space Grotesk', sans-serif; font-size: 2.4rem; font-weight: 700; letter-spacing: -0.02em; }
+.portail-avg-hero-label { color: var(--text-soft); font-size: 0.85rem; }
+.portail-subject-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 0; border-top: 1px solid var(--line); font-size: 0.86rem;
+}
+.portail-subject-row:first-of-type { border-top: none; }
+.portail-subject-name { font-weight: 500; }
+.portail-subject-grade { font-family: 'IBM Plex Mono', monospace; font-weight: 600; }
+.portail-subject-empty { color: var(--text-faint); }
+
+/* ---- Homework ---- */
+.portail-todo { grid-column: span 5; }
+.portail-todo-item { display: flex; align-items: flex-start; gap: 12px; padding: 11px 0; border-top: 1px solid var(--line); }
+.portail-todo-item:first-of-type { border-top: none; }
+.portail-todo-text { font-size: 0.86rem; font-weight: 500; line-height: 1.35; }
+.portail-todo-meta { display: flex; gap: 8px; align-items: center; margin-top: 5px; }
+.portail-pill { font-size: 0.68rem; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
+.portail-pill.due-soon { background: var(--coral-soft); color: var(--coral); }
+.portail-pill.due-later { background: var(--paper); color: var(--text-soft); }
+
+/* ---- Messages ---- */
+.portail-msg { grid-column: span 7; }
+.portail-msg-item { display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
+.portail-msg-item:first-of-type { border-top: none; }
+.portail-msg-avatar {
+  width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 0.72rem;
+  background: var(--amber-soft); color: #96601F;
+}
+.portail-msg-body { flex: 1; min-width: 0; }
+.portail-msg-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.portail-msg-sender { font-weight: 600; font-size: 0.85rem; }
+.portail-msg-time { font-size: 0.72rem; color: var(--text-faint); flex-shrink: 0; }
+.portail-msg-preview { font-size: 0.82rem; color: var(--text-soft); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---- Vie scolaire ---- */
+.portail-vs { grid-column: span 12; }
+.portail-vs-row { display: flex; gap: 14px; }
+.portail-vs-stat {
+  flex: 1; background: var(--paper); border-radius: 10px; padding: 16px 18px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.portail-vs-stat-num { font-family: 'Space Grotesk', sans-serif; font-size: 1.6rem; font-weight: 700; }
+.portail-vs-stat-label { font-size: 0.8rem; color: var(--text-soft); margin-top: 2px; }
+
+/* States */
+.portail-loading, .portail-error {
+  padding: 3rem; text-align: center; color: var(--text-soft);
+}
+.portail-error { color: var(--coral); }
+.portail-empty { border: 1px dashed var(--line); border-radius: 10px; padding: 1.5rem; text-align: center; color: var(--text-faint); font-size: 0.85rem; }
+
+/* ---------- RESPONSIVE ---------- */
+@media (max-width: 1080px) {
+  .portail-today { grid-column: span 12; }
+  .portail-avg { grid-column: span 6; grid-row: auto; }
+  .portail-todo { grid-column: span 6; }
+  .portail-msg { grid-column: span 12; }
+}
+@media (max-width: 760px) {
+  .portail { flex-direction: column; }
+  .portail-sidebar {
+    position: fixed; bottom: 0; left: 0; right: 0; top: auto;
+    height: auto; width: 100%; flex-direction: row; align-items: center;
+    padding: 8px 10px; z-index: 20; border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  .portail-brand, .portail-sidebar-footer, .portail-nav-label { display: none; }
+  .portail-nav { flex-direction: row; justify-content: space-around; flex: 1; }
+  .portail-nav-item span { display: none; }
+  .portail-nav-item { padding: 9px; }
+  .portail-content { padding: 20px 16px 88px 16px; }
+  .portail-topbar { padding: 14px 16px; }
+  .portail-avg, .portail-todo, .portail-msg { grid-column: span 12; }
+}

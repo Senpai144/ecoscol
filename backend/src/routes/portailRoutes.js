@@ -1,0 +1,230 @@
+import { Router } from 'express';
+import db from '../db/index.js';
+import { authenticate, requireRoles } from '../middleware/auth.js';
+
+const router = Router();
+router.use(authenticate, requireRoles('PARENT'));
+
+function jourSemaineActuel() {
+  const d = new Date();
+  return d.getDay() === 0 ? 7 : d.getDay();
+}
+
+function formatHeure(t) {
+  return String(t).slice(0, 5);
+}
+
+// BR-20.2 : un parent ne consulte que les données de ses propres enfants
+async function listerEnfantsDuParent(userId, ecoleId) {
+  const { rows } = await db.query(
+    `SELECT e.id, e.nom, e.prenom, e.matricule, e.classe_id, e.statut,
+            c.libelle AS classe_libelle,
+            nv.libelle AS niveau_libelle,
+            s.libelle AS serie_libelle
+     FROM tuteurs t
+     JOIN eleve_tuteurs et ON et.tuteur_id = t.id
+     JOIN eleves e ON e.id = et.eleve_id AND e.ecole_id = $2
+     LEFT JOIN classes c ON c.id = e.classe_id
+     LEFT JOIN niveaux nv ON nv.id = c.niveau_id
+     LEFT JOIN series s ON s.id = c.serie_id
+     WHERE t.user_id = $1 AND t.ecole_id = $2`,
+    [userId, ecoleId]
+  );
+  return rows;
+}
+
+async function derniereSequence(ecoleId) {
+  const { rows } = await db.query(
+    `SELECT s.*
+     FROM sequences s
+     JOIN annees_scolaires a ON a.id = s.annee_scolaire_id
+     WHERE s.ecole_id = $1 AND a.active = TRUE AND s.validee = TRUE
+     ORDER BY s.ordre DESC
+     LIMIT 1`,
+    [ecoleId]
+  );
+  if (rows[0]) return rows[0];
+
+  const { rows: fallback } = await db.query(
+    `SELECT s.*
+     FROM sequences s
+     JOIN annees_scolaires a ON a.id = s.annee_scolaire_id
+     WHERE s.ecole_id = $1 AND a.active = TRUE
+     ORDER BY s.ordre DESC
+     LIMIT 1`,
+    [ecoleId]
+  );
+  return fallback[0] ?? null;
+}
+
+async function moyennesEtNotes(sequenceId, classeId, eleveId, ecoleId) {
+  const { rows } = await db.query(
+    `SELECT m.nom AS matiere, m.id AS matiere_id,
+            ROUND(COALESCE(AVG(nt.valeur), 0)::numeric, 2) AS moyenne,
+            COALESCE(MAX(nt.coefficient), 1) AS coefficient,
+            COUNT(nt.id)::int AS n_notes
+     FROM matieres m
+     JOIN enseignements ens ON ens.matiere_id = m.id AND ens.classe_id = $3
+     LEFT JOIN notes nt ON nt.matiere_id = m.id
+                        AND nt.sequence_id = $1
+                        AND nt.eleve_id = $2
+     WHERE m.ecole_id = $4
+     GROUP BY m.nom, m.id
+     ORDER BY m.nom`,
+    [sequenceId, eleveId, classeId, ecoleId]
+  );
+
+  let somme = 0, totalCoeff = 0;
+  for (const r of rows) {
+    somme += Number(r.moyenne) * Number(r.coefficient);
+    totalCoeff += Number(r.coefficient);
+  }
+  const moyenneGenerale = totalCoeff > 0 ? Number((somme / totalCoeff).toFixed(2)) : 0;
+  return { parMatiere: rows, moyenneGenerale };
+}
+
+async function rangDeEleve(sequenceId, classeId, eleveId, ecoleId) {
+  const { rows } = await db.query(
+    `SELECT e.id AS eleve_id,
+            COALESCE(ROUND(SUM(nt.valeur * nt.coefficient)::numeric / NULLIF(SUM(nt.coefficient), 0), 2), 0) AS moyenne
+     FROM eleves e
+     LEFT JOIN notes nt ON nt.eleve_id = e.id AND nt.sequence_id = $1
+     WHERE e.classe_id = $2 AND e.statut = 'actif' AND e.ecole_id = $3
+     GROUP BY e.id
+     ORDER BY moyenne DESC`,
+    [sequenceId, classeId, ecoleId]
+  );
+  const idx = rows.findIndex((r) => Number(r.eleve_id) === Number(eleveId));
+  return { rang: idx === -1 ? 0 : idx + 1, totalEleves: rows.length };
+}
+
+router.get('/tableau-de-bord', async (req, res, next) => {
+  try {
+    const enfants = await listerEnfantsDuParent(req.user.id, req.user.ecole_id);
+    const sequence = await derniereSequence(req.user.ecole_id);
+    const jour = jourSemaineActuel();
+
+    const resultats = [];
+    for (const eleve of enfants) {
+      const { rows: edtRows } = await db.query(
+        `SELECT e.id, e.heure_debut, e.heure_fin, m.nom AS matiere,
+                u.prenom AS enseignant_prenom, u.nom AS enseignant_nom
+         FROM emplois_du_temps e
+         JOIN matieres m ON m.id = e.matiere_id
+         JOIN enseignants en ON en.id = e.enseignant_id
+         LEFT JOIN users u ON u.id = en.user_id
+         WHERE e.classe_id = $1 AND e.ecole_id = $2 AND e.jour_semaine = $3
+         ORDER BY e.heure_debut`,
+        [eleve.classe_id, req.user.ecole_id, jour]
+      );
+      const edt = edtRows.map((c) => ({
+        id: c.id,
+        matiere: c.matiere,
+        enseignant: `${c.enseignant_prenom ?? ''} ${c.enseignant_nom ?? ''}`.trim(),
+        heure_debut: formatHeure(c.heure_debut),
+        heure_fin: formatHeure(c.heure_fin),
+      }));
+
+      const { rows: devoirs } = await db.query(
+        `SELECT ct.contenu, ct.date_cours, m.nom AS matiere
+         FROM cahiers_texte ct
+         JOIN matieres m ON m.id = ct.matiere_id
+         WHERE ct.classe_id = $1 AND ct.ecole_id = $2
+         ORDER BY ct.date_cours DESC
+         LIMIT 6`,
+        [eleve.classe_id, req.user.ecole_id]
+      );
+
+      const { rows: statsVs } = await db.query(
+        `SELECT
+           COUNT(*) FILTER (WHERE type = 'absence')::int AS absences,
+           COUNT(*) FILTER (WHERE type = 'retard')::int AS retards,
+           COUNT(*) FILTER (WHERE type = 'absence' AND NOT justifiee)::int AS absences_non_justifiees
+         FROM absences
+         WHERE eleve_id = $1`,
+        [eleve.id]
+      );
+      const { rows: statsSanctions } = await db.query(
+        'SELECT COUNT(*)::int AS n FROM sanctions WHERE eleve_id = $1', [eleve.id]
+      );
+
+      const { rows: soldeRows } = await db.query(
+        `SELECT COALESCE(SUM(solde), 0)::numeric AS reste_a_payer
+         FROM echeanciers
+         WHERE eleve_id = $1`,
+        [eleve.id]
+      );
+
+      const { rows: notifications } = await db.query(
+        `SELECT id, type, message, lu, date
+         FROM notifications
+         WHERE user_id = $1
+         ORDER BY lu ASC, date DESC
+         LIMIT 5`,
+        [req.user.id]
+      );
+
+      let moyennes = null;
+      if (sequence) {
+        const m = await moyennesEtNotes(sequence.id, eleve.classe_id, eleve.id, req.user.ecole_id);
+        const r = await rangDeEleve(sequence.id, eleve.classe_id, eleve.id, req.user.ecole_id);
+        moyennes = {
+          sequence: { id: sequence.id, libelle: sequence.libelle, validee: sequence.validee },
+          moyenneGenerale: m.moyenneGenerale,
+          parMatiere: m.parMatiere.map((x) => ({
+            matiere: x.matiere,
+            moyenne: Number(x.moyenne),
+            coefficient: Number(x.coefficient),
+            n_notes: x.n_notes,
+          })),
+          rang: r.rang,
+          totalEleves: r.totalEleves,
+        };
+      }
+
+      const { rows: bulletinRows } = await db.query(
+        `SELECT identifiant_unique, chemin_fichier, date_generation
+         FROM documents_generes
+         WHERE eleve_id = $1 AND type = 'bulletin'
+         ORDER BY date_generation DESC
+         LIMIT 1`,
+        [eleve.id]
+      );
+
+      resultats.push({
+        eleve: {
+          id: eleve.id,
+          nom: eleve.nom,
+          prenom: eleve.prenom,
+          matricule: eleve.matricule,
+          statut: eleve.statut,
+          classe: eleve.classe_libelle,
+          niveau: eleve.niveau_libelle,
+          serie: eleve.serie_libelle,
+        },
+        edt,
+        devoirs,
+        vieScolaire: { ...statsVs[0], sanctions: statsSanctions[0].n },
+        solde: {
+          reste_a_payer: Number(soldeRows[0].reste_a_payer),
+        },
+        notifications,
+        moyennes,
+        bulletin: bulletinRows[0] ?? null,
+      });
+    }
+
+    res.json({
+      parent: { nom: req.user.nom, prenom: req.user.prenom },
+      jour: { numero: jour, libelle: ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'][jour === 7 ? 0 : jour] },
+      jouraccueil: {
+        date: new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }),
+      },
+      enfants: resultats,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+export default router;

@@ -9,6 +9,9 @@ import classRoutes from './routes/classRoutes.js';
 import eleveRoutes from './routes/eleveRoutes.js';
 import pedagogiqueRoutes from './routes/pedagogiqueRoutes.js';
 import documentRoutes from './routes/documentRoutes.js';
+import noteRoutes from './routes/noteRoutes.js';
+import bulletinRoutes from './routes/bulletinRoutes.js';
+import portailRoutes from './routes/portailRoutes.js';
 
 const app = express();
 
@@ -35,6 +38,9 @@ app.use('/api/classes', classRoutes);
 app.use('/api/eleves', eleveRoutes);
 app.use('/api/pedagogique', pedagogiqueRoutes);
 app.use('/api/documents', documentRoutes);
+app.use('/api/notes', noteRoutes);
+app.use('/api/bulletins', bulletinRoutes);
+app.use('/api/portail', portailRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Route inconnue' });

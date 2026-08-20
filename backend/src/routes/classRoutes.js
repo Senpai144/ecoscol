@@ -19,7 +19,8 @@ router.get('/', async (req, res, next) => {
        JOIN annees_scolaires a ON a.id = c.annee_scolaire_id
        LEFT JOIN eleves e ON e.classe_id = c.id AND e.statut = 'actif'
        WHERE c.ecole_id = $1
-       GROUP BY c.id, n.libelle, s.libelle, a.libelle
+       GROUP BY c.id, c.ecole_id, c.annee_scolaire_id, c.niveau_id, c.serie_id, c.libelle, c.capacite, c.salle,
+                n.libelle, n.ordre, s.libelle, a.libelle, a.date_debut
        ORDER BY a.date_debut DESC, n.ordre, c.libelle`,
       [req.user.ecole_id]
     );

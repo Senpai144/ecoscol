@@ -24,4 +24,7 @@ docs/build/
 
 # Sauvegardes locales
 backups/
-*.sql.gzbackend/documents/
+*.sql.gz
+
+# Documents PDF générés
+backend/documents/

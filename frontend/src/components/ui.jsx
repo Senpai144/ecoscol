@@ -26,11 +26,11 @@ export function Pagination({ page, pages, total, onChange }) {
 
 export function Badge({ children, tone = 'slate' }) {
   const tones = {
-    slate: 'bg-slate-200 text-slate-700',
-    green: 'bg-emerald-100 text-emerald-700',
-    red: 'bg-red-100 text-red-700',
-    amber: 'bg-amber-100 text-amber-700',
-    blue: 'bg-indigo-100 text-indigo-700',
+    slate: 'badge-slate',
+    green: 'badge-teal',
+    red: 'badge-coral',
+    amber: 'badge-amber',
+    blue: 'badge-ink',
   };
   return <span className={`badge ${tones[tone] || tones.slate}`}>{children}</span>;
 }

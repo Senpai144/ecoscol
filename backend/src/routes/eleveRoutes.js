@@ -274,4 +274,69 @@ router.delete('/:id', async (req, res, next) => {
   }
 });
 
+// Attache un compte d'utilisateur PARENT à un tuteur d'un élève (portail parents).
+// BR-20.2 : le parent doit avoir le rôle PARENT et appartenir à la même école.
+router.post('/:id/tuteurs/:tuteurId/attacher-compte', async (req, res, next) => {
+  const eleveId = parseInt(req.params.id, 10);
+  const tuteurId = parseInt(req.params.tuteurId, 10);
+  const { user_id } = req.body ?? {};
+
+  if (!user_id) {
+    return res.status(400).json({ error: 'user_id requis (compte PARENT)' });
+  }
+
+  try {
+    const { rows: eleves } = await db.query(
+      'SELECT id FROM eleves WHERE id = $1 AND ecole_id = $2',
+      [eleveId, req.user.ecole_id]
+    );
+    if (eleves.length === 0) return res.status(404).json({ error: 'Élève introuvable' });
+
+    const { rows: tuteurs } = await db.query(
+      `SELECT t.id FROM tuteurs t
+       JOIN eleve_tuteurs et ON et.tuteur_id = t.id
+       WHERE t.id = $1 AND t.ecole_id = $2 AND et.eleve_id = $3`,
+      [tuteurId, req.user.ecole_id, eleveId]
+    );
+    if (tuteurs.length === 0) {
+      return res.status(404).json({ error: 'Tuteur non lié à cet élève' });
+    }
+
+    const { rows: comptes } = await db.query(
+      `SELECT u.id, ARRAY_AGG(ur.role_code) AS roles
+       FROM users u
+       LEFT JOIN user_roles ur ON ur.user_id = u.id
+       WHERE u.id = $1 AND u.ecole_id = $2
+       GROUP BY u.id`,
+      [user_id, req.user.ecole_id]
+    );
+    const compte = comptes[0];
+    if (!compte) return res.status(404).json({ error: 'Compte utilisateur introuvable' });
+    if (!compte.roles.includes('PARENT')) {
+      return res.status(400).json({ error: 'Le compte doit avoir le rôle PARENT' });
+    }
+
+    const { rows: attaches } = await db.query(
+      'SELECT user_id FROM tuteurs WHERE id = $1',
+      [tuteurId]
+    );
+    if (attaches[0].user_id && Number(attaches[0].user_id) !== Number(user_id)) {
+      return res.status(409).json({ error: 'Ce tuteur est déjà lié à un autre compte' });
+    }
+
+    await db.query('UPDATE tuteurs SET user_id = $1 WHERE id = $2', [user_id, tuteurId]);
+
+    await journaliserAction({
+      userId: req.user.id,
+      action: 'attacher_compte_tuteur',
+      cible: 'tuteurs',
+      details: { tuteur_id: tuteurId, eleve_id: eleveId, user_id },
+    });
+
+    res.json({ message: 'Compte parent attaché au tuteur', user_id });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;

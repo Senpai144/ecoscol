@@ -105,3 +105,143 @@ export async function genererCertificatScolarite({ ecole, eleve, classe, annee, 
 export function cheminAbsolu(nomFichier) {
   return path.join(DOCUMENTS_DIR, path.basename(nomFichier));
 }
+
+function mentionPourMoyenne(moyenne) {
+  if (moyenne >= 16) return 'Très bien';
+  if (moyenne >= 14) return 'Bien';
+  if (moyenne >= 12) return 'Assez bien';
+  if (moyenne >= 10) return 'Passable';
+  return 'Insuffisant';
+}
+
+// Bulletin de notes: moyennes par matière, moyenne générale, rang, mention
+export async function genererBulletin({
+  ecole, eleve, classe, annee, sequence,
+  moyennesParMatiere, moyenneGenerale, rang, TOTAL_ELEVES,
+  decision = null,
+}) {
+  garantirDossierDocuments();
+  moyennesParMatiere.forEach((m) => { m.moyenne = Number(m.moyenne); });
+  moyenneGenerale = Number(moyenneGenerale) || 0;
+  const doc = new PDFDocument({ size: 'A4', margin: 50, info: { Title: `Bulletin ${eleve.prenom} ${eleve.nom}` } });
+  const identifiantDoc = `BUL-${eleve.matricule}-${sequence.id}`;
+  const nomFichier = `bulletin_${identifiantDoc}.pdf`;
+  const chemin = cheminDocument(nomFichier);
+  const stream = fs.createWriteStream(chemin);
+  doc.pipe(stream);
+
+  const logoPath = chargerImage(ecole, 'logo_path');
+
+  const enTete = () => {
+    if (logoPath) {
+      try { doc.image(logoPath, 50, 45, { width: 80 }); } catch { /* absente */ }
+    }
+    doc.fontSize(15).font('Helvetica-Bold').fillColor('#1a5276')
+      .text(ecole.nom, 140, 50, { align: 'center', width: 410 });
+    if (ecole.adresse) {
+      doc.fontSize(9).font('Helvetica').fillColor('#555566')
+        .text(ecole.adresse, 140, 72, { align: 'center', width: 410 });
+    }
+    doc.moveTo(50, 110).lineTo(545, 110).strokeColor('#1a5276').lineWidth(1.5).stroke();
+  };
+
+  doc.on('pageAdded', () => { enTete(); });
+  enTete();
+
+  doc.moveDown(5);
+  doc.fontSize(18).font('Helvetica-Bold').fillColor('#2c3e50').text('BULLETIN DE NOTES', { align: 'center' });
+  doc.moveDown(0.5);
+  doc.fontSize(11).font('Helvetica').fillColor('#555555')
+    .text(sequence.libelle, { align: 'center' });
+
+  doc.moveDown(1.5);
+  doc.fontSize(12).font('Helvetica-Bold').fillColor('#1a5276')
+    .text(`${eleve.prenom} ${eleve.nom}`, { align: 'left' });
+  doc.fontSize(10).font('Helvetica').fillColor('#2c3e50')
+    .text([
+      `Matricule : ${eleve.matricule}`,
+      `Classe : ${classe?.libelle || '—'}${classe?.serie_libelle ? ` (Série ${classe.serie_libelle})` : ''}`,
+      `Année scolaire : ${annee?.libelle || '—'}`,
+    ].join('    •    '));
+
+  doc.moveDown(1.2);
+
+  // Tableau des moyennes par matière
+  const startY = doc.y;
+  const colMatiere = 60;
+  const colMoyenne = 270;
+  const colMention = 420;
+  const colWidth = [colMatiere, 130, 90, 90];
+
+  doc.fontSize(10).font('Helvetica-Bold').fillColor('#ffffff');
+  doc.rect(50, startY, 180, 22).fill('#1a5276');
+  doc.rect(230, startY, 120, 22).fill('#1f618d');
+  doc.rect(350, startY, 100, 22).fill('#1f618d');
+  doc.rect(450, startY, 95, 22).fill('#1f618d');
+  doc.fill('#ffffff')
+    .text('Matière', 60, startY + 6)
+    .text('Moyenne /20', 235, startY + 6)
+    .text('Coeff.', 375, startY + 6)
+    .text('Mention', 460, startY + 6);
+
+  let y = startY + 22;
+  doc.font('Helvetica').fillColor('#2c3e50').fontSize(10);
+  for (const m of moyennesParMatiere) {
+    if (y > 740) {
+      doc.addPage();
+      y = 130;
+      enTete();
+    }
+    doc.rect(50, y, 495, 19).strokeColor('#cccccc').lineWidth(0.5).stroke();
+    doc.text(m.matiere, 60, y + 5);
+    doc.fillColor('#1a5276').font('Helvetica-Bold').text(m.moyenne.toFixed(2), 235, y + 5);
+    doc.fillColor('#555555').font('Helvetica').text(String(m.coefficient), 375, y + 5);
+    doc.fillColor('#2c3e50').text(mentionPourMoyenne(m.moyenne), 460, y + 5);
+    y += 19;
+  }
+
+  y += 12;
+  doc.font('Helvetica-Bold').fontSize(11).fillColor('#1a5276')
+    .text('MOYENNE GÉNÉRALE', 60, y);
+  doc.fillColor('#28b463').fontSize(14)
+    .text(moyenneGenerale.toFixed(2) + ' / 20', 300, y);
+  doc.fillColor('#2c3e50').fontSize(10).font('Helvetica')
+    .text(`Rang : ${rang}${TOTAL_ELEVES ? ` / ${TOTAL_ELEVES}` : ''}`, 380, y + 2);
+  y += 26;
+
+  doc.font('Helvetica-Bold').fontSize(11).fillColor('#1a5276')
+    .text('MENTION', 60, y);
+  doc.fillColor('#2c3e50').font('Helvetica').fontSize(10)
+    .text(mentionPourMoyenne(moyenneGenerale), 140, y + 2);
+  y += 22;
+
+  if (decision) {
+    doc.font('Helvetica-Bold').fontSize(10).fillColor('#c0392b')
+      .text(`Décision du conseil : ${decision}`, 60, y);
+  }
+
+  // Signatures
+  doc.moveDown(4);
+  const signY = 680;
+  doc.fontSize(10).font('Helvetica-Bold').fillColor('#2c3e50');
+  doc.text("Le Chef d'établissement", 60, signY);
+  doc.text('Le Censeur', 300, signY);
+
+  const signaturePath = chargerImage(ecole, 'signature_path');
+  if (signaturePath) {
+    try { doc.image(signaturePath, 60, 690, { width: 120 }); } catch { /* absente */ }
+  }
+  const cachetPath = chargerImage(ecole, 'cachet_path');
+  if (cachetPath) {
+    try { doc.image(cachetPath, 380, 690, { width: 140 }); } catch { /* absente */ }
+  }
+
+  doc.fontSize(8).font('Helvetica-Oblique').fillColor('#777888')
+    .text(`Document généré électroniquement le ${new Date().toLocaleDateString('fr-FR')}`, 50, 785, { align: 'center', width: 500 });
+
+  doc.end();
+  return new Promise((resolve, reject) => {
+    stream.on('finish', () => resolve({ nomFichier, identifiant: identifiantDoc }));
+    stream.on('error', reject);
+  });
+}
