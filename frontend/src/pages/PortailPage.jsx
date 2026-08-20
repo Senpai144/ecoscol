@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { apiFetch } from '../api.js';
-import { getPaiementsPortail, payerEnLigne, telechargerDocumentPortail } from '../api.portail.js';
+import { getPaiementsPortail, payerEnLigne, modifierPaiementPortail, telechargerDocumentPortail } from '../api.portail.js';
 import './portail.css';
 
 const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
@@ -209,6 +209,7 @@ const LIBELLES_MODES = {
 function CartePaiements({ enfant, token }) {
   const [donnees, setDonnees] = useState(null);
   const [form, setForm] = useState(null);
+  const [modification, setModification] = useState(null);
   const [message, setMessage] = useState(null);
   const [erreur, setErreur] = useState('');
   const [chargement, setChargement] = useState(false);
@@ -235,9 +236,8 @@ function CartePaiements({ enfant, token }) {
         eleve_id: enfant.eleve.id,
         echeancier_id: Number(form.echeancier_id),
         montant: Number(form.montant),
-        motif: 'Frais de scolarité (paiement en ligne)',
+        motif: form.motif,
         mode: form.mode,
-        transaction_ref: form.transaction_ref || undefined,
       });
       setMessage(d.message);
       if (d.paiement?.recu_fichier) {
@@ -246,7 +246,32 @@ function CartePaiements({ enfant, token }) {
       setForm(null);
       charger();
     } catch (err) {
-      setErreur(err.message);
+      setErreur(err.message || 'Échec du paiement');
+    } finally {
+      setChargement(false);
+    }
+  }
+
+  async function corriger(e) {
+    e.preventDefault();
+    setChargement(true);
+    setErreur('');
+    setMessage(null);
+    try {
+      const d = await modifierPaiementPortail(modification.paiement.id, {
+        montant: Number(modification.montant),
+        mode: modification.mode,
+        motif: modification.motif,
+        transaction_ref: modification.transaction_ref,
+      });
+      setMessage(d.message);
+      if (d.paiement?.recu_fichier) {
+        telechargerDocumentPortail(d.paiement.recu_fichier).catch(() => {});
+      }
+      setModification(null);
+      charger();
+    } catch (err) {
+      setErreur(err.message || 'Échec de la modification');
     } finally {
       setChargement(false);
     }
@@ -255,6 +280,7 @@ function CartePaiements({ enfant, token }) {
   const reste = donnees?.resteDu ?? 0;
   const echeances = donnees?.echeanciers ?? [];
   const paiements = donnees?.paiements ?? [];
+  const motifs = [...new Set(echeances.map((e) => e.libelle).filter(Boolean))];
 
   return (
     <div className="portail-card portail-todo portail-pay" style={{ animationDelay: '0.3s' }}>
@@ -286,7 +312,7 @@ function CartePaiements({ enfant, token }) {
                       <span className="portail-recu-montant">{fmtMontant(resteEc)}</span>
                       <button
                         className="portail-pay-btn"
-                        onClick={() => setForm({ echeancier_id: ec.id, montant: resteEc.toFixed(0), mode: 'mobile_money', transaction_ref: '' })}
+                        onClick={() => setForm({ echeancier_id: ec.id, montant: resteEc.toFixed(0), mode: 'mobile_money', motif: ec.libelle })}
                       >
                         Payer en ligne
                       </button>
@@ -304,21 +330,44 @@ function CartePaiements({ enfant, token }) {
               <div className="portail-pay-title">
                 Paiement mobile money — reçu immédiat
               </div>
+              <select value={form.motif} onChange={(e) => setForm({ ...form, motif: e.target.value })} required aria-label="Motif">
+                {motifs.map((m) => <option key={m} value={m}>{m}</option>)}
+              </select>
               <input type="number" min="1" step="1" value={form.montant} onChange={(e) => setForm({ ...form, montant: e.target.value })} required aria-label="Montant" />
               <select value={form.mode} onChange={(e) => setForm({ ...form, mode: e.target.value })} aria-label="Mode">
                 {Object.entries(LIBELLES_MODES).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
-              <input
-                type="text"
-                value={form.transaction_ref}
-                onChange={(e) => setForm({ ...form, transaction_ref: e.target.value })}
-                placeholder="Reçu du réseau (ex. OM-1234…) — facultatif"
-                aria-label="Référence transaction"
-              />
+              <p className="portail-pay-autoref">Référence de transaction générée automatiquement.</p>
               <button type="submit" className="portail-pay-btn portail-pay-btn-primary" disabled={chargement}>
                 {chargement ? 'Confirmation…' : `Confirmer le paiement (${fmtMontant(form.montant)})`}
               </button>
               <button type="button" className="portail-pay-cancel" onClick={() => setForm(null)}>Annuler</button>
+            </form>
+          )}
+
+          {modification && (
+            <form className="portail-pay-form" onSubmit={corriger}>
+              <div className="portail-pay-title">
+                Corriger le paiement {modification.paiement.numero_recu}
+              </div>
+              <select value={modification.motif} onChange={(e) => setModification({ ...modification, motif: e.target.value })} aria-label="Motif">
+                {motifs.map((m) => <option key={m} value={m}>{m}</option>)}
+              </select>
+              <input type="number" min="1" step="1" value={modification.montant} onChange={(e) => setModification({ ...modification, montant: e.target.value })} required aria-label="Montant" />
+              <select value={modification.mode} onChange={(e) => setModification({ ...modification, mode: e.target.value })} aria-label="Mode">
+                {Object.entries(LIBELLES_MODES).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+              <input
+                type="text"
+                value={modification.transaction_ref}
+                onChange={(e) => setModification({ ...modification, transaction_ref: e.target.value })}
+                placeholder="Référence de transaction (facultatif)"
+                aria-label="Référence transaction"
+              />
+              <button type="submit" className="portail-pay-btn portail-pay-btn-primary" disabled={chargement}>
+                {chargement ? 'Enregistrement…' : 'Enregistrer la correction'}
+              </button>
+              <button type="button" className="portail-pay-cancel" onClick={() => setModification(null)}>Annuler</button>
             </form>
           )}
 
@@ -336,6 +385,20 @@ function CartePaiements({ enfant, token }) {
                   </div>
                   <div className="portail-recu-right">
                     <span className={`portail-recu-montant${p.recu_annule ? ' portail-recu-annule' : ''}`}>{fmtMontant(p.montant)}</span>
+                    {!p.recu_annule && (
+                      <button
+                        className="portail-pay-btn"
+                        onClick={() => setModification({
+                          paiement: p,
+                          montant: Number(p.montant).toFixed(0),
+                          mode: p.mode,
+                          motif: p.motif,
+                          transaction_ref: p.transaction_ref || '',
+                        })}
+                      >
+                        Modifier
+                      </button>
+                    )}
                     {!p.recu_annule && p.recu_fichier && (
                       <button className="portail-pay-btn" onClick={() => telechargerDocumentPortail(p.recu_fichier).catch(() => setErreur('Reçu indisponible au téléchargement'))}>
                         Reçu PDF

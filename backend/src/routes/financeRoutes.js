@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import db from '../db/index.js';
+import db, { withTransaction } from '../db/index.js';
 import { authenticate, requireRoles } from '../middleware/auth.js';
 import { journaliserAction } from '../services/authService.js';
 import { notifierParents } from '../services/notificationService.js';
-import { creerPaiement, MODES_PAIEMENT } from '../services/financeService.js';
+import { creerPaiement, modifierPaiement, regenererRecuPaiement, MODES_PAIEMENT } from '../services/financeService.js';
 import { genererRecu } from '../services/pdfService.js';
 
 const router = Router();
@@ -324,6 +324,54 @@ router.post('/paiements/:id/annuler', requireRoles(...CONTROLE), async (req, res
       details: { numero_recu: paiement.numero_recu, motif: req.body?.motif ?? null },
     });
     res.json({ paiement: paiementAnnule });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch('/paiements/:id', requireRoles(...CONTROLE), async (req, res, next) => {
+  const id = parseInt(req.params.id, 10);
+  const { montant, mode, motif, transaction_ref, date_paiement } = req.body ?? {};
+  try {
+    const { rows: existants } = await db.query(
+      'SELECT * FROM paiements WHERE id = $1 AND ecole_id = $2',
+      [id, req.user.ecole_id]
+    );
+    if (existants.length === 0) return res.status(404).json({ error: 'Paiement introuvable' });
+    if (existants[0].recu_annule) {
+      return res.status(409).json({ error: 'Un paiement annulé ne peut pas être modifié' });
+    }
+
+    const paiement = existants[0];
+    const modeFinal = mode ?? paiement.mode;
+    if (!MODES_PAIEMENT.includes(modeFinal)) {
+      return res.status(400).json({ error: `Mode invalide (${MODES_PAIEMENT.join(', ')})` });
+    }
+
+    const resultat = await modifierPaiement({
+      ecoleId: req.user.ecole_id,
+      paiementId: id,
+      modifiePar: req.user.id,
+      montant: montant ?? paiement.montant,
+      mode: modeFinal,
+      motif: motif ?? paiement.motif,
+      transactionRef: transaction_ref ?? paiement.transaction_ref,
+      date: date_paiement ?? null,
+    });
+    if (!resultat) return res.status(404).json({ error: 'Paiement introuvable' });
+
+    const nomFichier = await regenererRecuPaiement({
+      ecoleId: req.user.ecole_id,
+      eleveId: paiement.eleve_id,
+      paiementId: id,
+      genrePar: req.user.id,
+    });
+
+    await journaliserAction({
+      userId: req.user.id, action: 'modification_paiement', cible: 'paiements',
+      details: { numero_recu: paiement.numero_recu, avant: Number(paiement.montant), apres: Number(resultat.paiement.montant) },
+    });
+    res.json({ paiement: { ...resultat.paiement, recu_fichier: nomFichier } });
   } catch (err) {
     next(err);
   }

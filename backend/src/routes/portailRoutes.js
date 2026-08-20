@@ -4,8 +4,8 @@ import db from '../db/index.js';
 import { authenticate, requireRoles } from '../middleware/auth.js';
 import { journaliserAction } from '../services/authService.js';
 import { notifierParents } from '../services/notificationService.js';
-import { creerPaiement, MODES_PAIEMENT } from '../services/financeService.js';
-import { genererRecu, cheminAbsolu } from '../services/pdfService.js';
+import { creerPaiement, modifierPaiement, regenererRecuPaiement, MODES_PAIEMENT } from '../services/financeService.js';
+import { cheminAbsolu } from '../services/pdfService.js';
 
 const router = Router();
 router.use(authenticate, requireRoles('PARENT'));
@@ -306,7 +306,8 @@ router.post('/paiements', async (req, res, next) => {
     }
 
     const prefixe = { especes: 'CAI', cheque: 'CHQ', mobile_money: 'MM', virement: 'VIR' }[mode] || 'PAY';
-    const transactionRef = transaction_ref || `${prefixe}-${Date.now()}`;
+    // Référence de transaction générée automatiquement (passerelle simulée : MM-<horodatage>-<aléa>)
+    const transactionRef = transaction_ref || `${prefixe}-${Date.now()}-${Math.floor(Math.random() * 900 + 100)}`;
 
     const paiement = await creerPaiement({
       ecoleId: req.user.ecole_id,
@@ -321,22 +322,12 @@ router.post('/paiements', async (req, res, next) => {
     });
 
     // Reçu généré automatiquement (BR : paiement en ligne avec reçu automatique), archivé et téléchargeable
-    const { rows: ecoles } = await db.query('SELECT * FROM ecoles WHERE id = $1', [req.user.ecole_id]);
-    const { rows: classeRow } = await db.query(
-      'SELECT c.libelle FROM classes c WHERE c.id = $1', [enfant.classe_id]
-    );
-    const resultat = await genererRecu({
-      ecole: ecoles[0],
-      eleve: { prenom: enfant.prenom, nom: enfant.nom, matricule: enfant.matricule },
-      classe: classeRow[0] ?? null,
-      paiement,
-      echeancier: { libelle: echeancier_id ? 'Échéance associée' : null },
+    const nomFichier = await regenererRecuPaiement({
+      ecoleId: req.user.ecole_id,
+      eleveId: eleve_id,
+      paiementId: paiement.id,
+      genrePar: req.user.id,
     });
-    await db.query(
-      `INSERT INTO documents_generes (ecole_id, type, identifiant_unique, eleve_id, paiement_id, chemin_fichier, genere_par)
-       VALUES ($1, 'recu', $2, $3, $4, $5, $6)`,
-      [req.user.ecole_id, paiement.numero_recu, eleve_id, paiement.id, resultat.nomFichier, req.user.id]
-    );
 
     await notifierParents(
       eleve_id, req.user.ecole_id, 'finance',
@@ -348,8 +339,65 @@ router.post('/paiements', async (req, res, next) => {
     });
 
     res.status(201).json({
-      paiement: { ...paiement, recu_fichier: resultat.nomFichier },
+      paiement: { ...paiement, recu_fichier: nomFichier },
       message: `Paiement ${paiement.numero_recu} confirmé. Le reçu est disponible dans votre portail.`,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Correction d'un paiement en ligne saisi par erreur (montant, mode, motif, référence).
+// BR-05 : jamais de suppression — le solde est recalculé et le reçu PDF régénéré.
+router.patch('/paiements/:id', async (req, res, next) => {
+  const id = parseInt(req.params.id, 10);
+  const { montant, mode, motif, transaction_ref } = req.body ?? {};
+  try {
+    const { rows: paiements } = await db.query(
+      'SELECT * FROM paiements WHERE id = $1 AND ecole_id = $2',
+      [id, req.user.ecole_id]
+    );
+    if (paiements.length === 0) return res.status(404).json({ error: 'Paiement introuvable' });
+    const paiement = paiements[0];
+    const enfant = await enfantDuParent(req.user.id, req.user.ecole_id, paiement.eleve_id);
+    if (!enfant) return res.status(404).json({ error: 'Paiement introuvable pour vos enfants' });
+    if (paiement.recu_annule) return res.status(409).json({ error: 'Un paiement annulé ne peut pas être modifié' });
+
+    const modeFinal = mode ?? paiement.mode;
+    if (!MODES_PAIEMENT.includes(modeFinal)) {
+      return res.status(400).json({ error: `Mode invalide (${MODES_PAIEMENT.join(', ')})` });
+    }
+
+    const resultat = await modifierPaiement({
+      ecoleId: req.user.ecole_id,
+      paiementId: id,
+      modifiePar: req.user.id,
+      montant: montant ?? paiement.montant,
+      mode: modeFinal,
+      motif: motif ?? paiement.motif,
+      transactionRef: transaction_ref ?? paiement.transaction_ref,
+    });
+    if (!resultat) return res.status(404).json({ error: 'Paiement introuvable' });
+
+    const nomFichier = await regenererRecuPaiement({
+      ecoleId: req.user.ecole_id,
+      eleveId: paiement.eleve_id,
+      paiementId: id,
+      genrePar: req.user.id,
+    });
+
+    await notifierParents(
+      paiement.eleve_id, req.user.ecole_id, 'finance',
+      `Votre paiement ${paiement.numero_recu} a été corrigé : ${Number(resultat.paiement.montant).toLocaleString('fr-FR')} FCFA (${modeFinal}). Le reçu mis à jour est disponible dans le portail.`
+    );
+    await journaliserAction({
+      userId: req.user.id, action: 'modification_paiement', cible: 'paiements',
+      details: { numero_recu: paiement.numero_recu, avant: Number(paiement.montant), apres: Number(resultat.paiement.montant), origine: 'portail' },
+    });
+
+    res.json({
+      paiement: { ...resultat.paiement, recu_fichier: nomFichier },
+      message: `Paiement ${paiement.numero_recu} corrigé. Le solde et le reçu ont été mis à jour.`,
     });
   } catch (err) {
     next(err);
