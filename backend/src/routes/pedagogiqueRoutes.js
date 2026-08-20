@@ -7,7 +7,7 @@ const router = Router();
 
 router.use(authenticate);
 
-const ROLES_LECTURE = ['ADMIN', 'SECRETARIAT', 'CENSEUR', 'ENSEIGNANT'];
+const ROLES_LECTURE = ['ADMIN', 'SECRETARIAT', 'CENSEUR', 'ENSEIGNANT', 'COMPTABLE'];
 const ROLES_ECRITURE = ['ADMIN', 'SECRETARIAT', 'CENSEUR'];
 
 // ---- Matières ----

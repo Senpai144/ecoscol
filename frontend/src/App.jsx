@@ -13,6 +13,7 @@ import FicheElevePage from './pages/FicheElevePage.jsx';
 import PortailPage from './pages/PortailPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
 import VieScolairePage from './pages/VieScolairePage.jsx';
+import FinancePage from './pages/FinancePage.jsx';
 import './index.css';
 
 const MARQUE = (
@@ -47,6 +48,11 @@ function IconeVieScolaire() {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v18M3 12h18" /><circle cx="12" cy="12" r="9" /></svg>
   );
 }
+function IconeFinances() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /><circle cx="6" cy="14" r="1" fill="currentColor" /><circle cx="10" cy="14" r="1" fill="currentColor" /></svg>
+  );
+}
 
 function LayoutApp() {
   const { session, logout } = useAuth();
@@ -55,6 +61,7 @@ function LayoutApp() {
   const roles = session?.user?.roles || [];
   const peutScolarite = roles.some((r) => ['ADMIN', 'SECRETARIAT', 'CENSEUR'].includes(r));
   const peutVieScolaire = roles.some((r) => ['ADMIN', 'SECRETARIAT', 'CENSEUR', 'ENSEIGNANT'].includes(r));
+  const peutFinances = roles.some((r) => ['ADMIN', 'SECRETARIAT', 'COMPTABLE'].includes(r));
   const initiales = ((session?.user?.prenom?.[0] ?? '') + (session?.user?.nom?.[0] ?? '')).toUpperCase();
 
   const items = [
@@ -62,6 +69,7 @@ function LayoutApp() {
     { vers: '/eleves', label: 'Élèves', visible: peutScolarite, icone: <IconeEleves /> },
     { vers: '/classes', label: 'Classes', visible: peutScolarite, icone: <IconeClasses /> },
     { vers: '/vie-scolaire', label: 'Vie scolaire', visible: peutVieScolaire, icone: <IconeVieScolaire /> },
+    { vers: '/finances', label: 'Finances', visible: peutFinances, icone: <IconeFinances /> },
     { vers: '/comptes', label: 'Comptes', visible: roles.includes('ADMIN'), icone: <IconeComptes /> },
   ];
 
@@ -187,6 +195,7 @@ export default function App() {
             <Route path="/eleves/:id" element={<FicheElevePage />} />
             <Route path="/classes" element={<ProtectedRoute roles={['ADMIN', 'SECRETARIAT', 'CENSEUR']}><ClassesPage /></ProtectedRoute>} />
             <Route path="/vie-scolaire" element={<ProtectedRoute roles={['ADMIN', 'SECRETARIAT', 'CENSEUR', 'ENSEIGNANT']}><VieScolairePage /></ProtectedRoute>} />
+            <Route path="/finances" element={<ProtectedRoute roles={['ADMIN', 'SECRETARIAT', 'COMPTABLE']}><FinancePage /></ProtectedRoute>} />
           </Route>
           <Route path="/acces-interdit" element={<AccesInterdit />} />
           <Route path="*" element={<main className="container"><h1>404 — Page introuvable</h1><Link to="/">Accueil</Link></main>} />

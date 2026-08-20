@@ -5,10 +5,10 @@ import { journaliserAction } from '../services/authService.js';
 
 const router = Router();
 
-router.use(authenticate, requireRoles('ADMIN', 'SECRETARIAT', 'CENSEUR'));
+router.use(authenticate);
 
 // ---- Niveaux ----
-router.get('/niveaux', async (req, res, next) => {
+router.get('/niveaux', requireRoles('ADMIN', 'SECRETARIAT', 'CENSEUR', 'COMPTABLE'), async (req, res, next) => {
   try {
     const { rows } = await db.query(
       'SELECT * FROM niveaux WHERE ecole_id = $1 ORDER BY ordre',
@@ -20,7 +20,7 @@ router.get('/niveaux', async (req, res, next) => {
   }
 });
 
-router.post('/niveaux', async (req, res, next) => {
+router.post('/niveaux', requireRoles('ADMIN', 'SECRETARIAT', 'CENSEUR'), async (req, res, next) => {
   const { libelle, ordre } = req.body ?? {};
   if (!libelle || ordre === undefined) {
     return res.status(400).json({ error: 'Libellé et ordre requis' });
@@ -39,7 +39,7 @@ router.post('/niveaux', async (req, res, next) => {
 });
 
 // ---- Séries ----
-router.get('/series', async (req, res, next) => {
+router.get('/series', requireRoles('ADMIN', 'SECRETARIAT', 'CENSEUR', 'COMPTABLE'), async (req, res, next) => {
   try {
     const { rows } = await db.query(
       'SELECT * FROM series WHERE ecole_id = $1 ORDER BY libelle',
@@ -51,7 +51,7 @@ router.get('/series', async (req, res, next) => {
   }
 });
 
-router.post('/series', async (req, res, next) => {
+router.post('/series', requireRoles('ADMIN', 'SECRETARIAT', 'CENSEUR'), async (req, res, next) => {
   const { libelle } = req.body ?? {};
   if (!libelle) return res.status(400).json({ error: 'Libellé requis' });
   try {
@@ -68,7 +68,7 @@ router.post('/series', async (req, res, next) => {
 });
 
 // ---- Années scolaires ----
-router.get('/annees-scolaires', async (req, res, next) => {
+router.get('/annees-scolaires', requireRoles('ADMIN', 'SECRETARIAT', 'CENSEUR', 'COMPTABLE'), async (req, res, next) => {
   try {
     const { rows } = await db.query(
       'SELECT * FROM annees_scolaires WHERE ecole_id = $1 ORDER BY date_debut DESC',
@@ -80,7 +80,7 @@ router.get('/annees-scolaires', async (req, res, next) => {
   }
 });
 
-router.post('/annees-scolaires', async (req, res, next) => {
+router.post('/annees-scolaires', requireRoles('ADMIN', 'SECRETARIAT', 'CENSEUR'), async (req, res, next) => {
   const { libelle, date_debut, date_fin, active } = req.body ?? {};
   if (!libelle || !date_debut || !date_fin) {
     return res.status(400).json({ error: 'Libellé, date de début et date de fin requis' });
@@ -110,7 +110,7 @@ router.post('/annees-scolaires', async (req, res, next) => {
   }
 });
 
-router.patch('/annees-scolaires/:id/activer', async (req, res, next) => {
+router.patch('/annees-scolaires/:id/activer', requireRoles('ADMIN', 'SECRETARIAT', 'CENSEUR'), async (req, res, next) => {
   const id = parseInt(req.params.id, 10);
   const client = await db.connect();
   try {

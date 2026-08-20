@@ -13,6 +13,7 @@ import noteRoutes from './routes/noteRoutes.js';
 import bulletinRoutes from './routes/bulletinRoutes.js';
 import portailRoutes from './routes/portailRoutes.js';
 import vieScolaireRoutes from './routes/vieScolaireRoutes.js';
+import financeRoutes from './routes/financeRoutes.js';
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.use('/api/notes', noteRoutes);
 app.use('/api/bulletins', bulletinRoutes);
 app.use('/api/portail', portailRoutes);
 app.use('/api/vie-scolaire', vieScolaireRoutes);
+app.use('/api/finances', financeRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Route inconnue' });

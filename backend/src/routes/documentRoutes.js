@@ -7,9 +7,7 @@ import { genererCertificatScolarite, cheminAbsolu } from '../services/pdfService
 
 const router = Router();
 
-router.use(authenticate, requireRoles('ADMIN', 'SECRETARIAT', 'CENSEUR'));
-
-router.post('/certificat-scolarite/:eleveId', async (req, res, next) => {
+router.post('/certificat-scolarite/:eleveId', authenticate, requireRoles('ADMIN', 'SECRETARIAT', 'CENSEUR'), async (req, res, next) => {
   const eleveId = parseInt(req.params.eleveId, 10);
 
   try {
@@ -63,7 +61,7 @@ router.post('/certificat-scolarite/:eleveId', async (req, res, next) => {
   }
 });
 
-router.get('/documents/:nomFichier', authenticate, async (req, res, next) => {
+router.get('/documents/:nomFichier', authenticate, requireRoles('ADMIN', 'SECRETARIAT', 'CENSEUR', 'COMPTABLE'), async (req, res, next) => {
   const nomFichier = req.params.nomFichier;
   try {
     const { rows } = await db.query(
@@ -82,6 +80,14 @@ router.get('/documents/:nomFichier', authenticate, async (req, res, next) => {
         [eleve_id, req.user.ecole_id]
       );
       if (eleves.length === 0 && !req.user.roles.some((r) => ['ADMIN', 'SECRETARIAT', 'CENSEUR'].includes(r))) {
+        return res.status(403).json({ error: 'Accès refusé' });
+      }
+    } else if (type === 'recu') {
+      const { rows: eleves } = await db.query(
+        'SELECT id FROM eleves WHERE id = $1 AND ecole_id = $2',
+        [eleve_id, req.user.ecole_id]
+      );
+      if (eleves.length === 0 && !req.user.roles.some((r) => ['ADMIN', 'SECRETARIAT', 'CENSEUR', 'COMPTABLE'].includes(r))) {
         return res.status(403).json({ error: 'Accès refusé' });
       }
     }
