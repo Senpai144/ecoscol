@@ -3,6 +3,10 @@ import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import ApiStatus from './components/ApiStatus.jsx';
 import LoginPage from './pages/LoginPage.jsx';
+import ClassesPage from './pages/ClassesPage.jsx';
+import ScolariteElevesPage from './pages/ScolariteElevesPage.jsx';
+import InscriptionPage from './pages/InscriptionPage.jsx';
+import FicheElevePage from './pages/FicheElevePage.jsx';
 import './index.css';
 
 function Home() {
@@ -32,16 +36,20 @@ function Home() {
 function LayoutApp() {
   const { session, logout } = useAuth();
   const navigate = useNavigate();
+  const roles = session?.user?.roles || [];
+  const peutScolarite = roles.some((r) => ['ADMIN', 'SECRETARIAT', 'CENSEUR'].includes(r));
   return (
     <div>
       <header className="topbar">
         <strong>ECOSCOL</strong>
         <nav>
           <Link to="/tableau-de-bord">Accueil</Link>
-          {session?.user?.roles?.includes('ADMIN') && <Link to="/comptes">Comptes</Link>}
+          {peutScolarite && <Link to="/eleves">Élèves</Link>}
+          {peutScolarite && <Link to="/classes">Classes</Link>}
+          {roles.includes('ADMIN') && <Link to="/comptes">Comptes</Link>}
         </nav>
         <span className="topbar-user">
-          {session ? `${session.user.prenom} ${session.user.nom}` : ''}
+          {session ? `${session.user.prenom} ${session.user.nom} (${roles.join(', ')})` : ''}
           {session && (
             <button
               className="btn btn-ghost"
@@ -63,6 +71,18 @@ function Dashboard() {
     <main className="container">
       <h1>Tableau de bord</h1>
       <p>Bienvenue {session?.user?.prenom}. Le tableau de bord (statistiques réelles) arrive à la phase 7.</p>
+      <div className="grid">
+        <section>
+          <h2>Élèves inscrits</h2>
+          <p>Consultez les dossiers élèves.</p>
+          <Link to="/eleves">Ouvrir les élèves</Link>
+        </section>
+        <section>
+          <h2>Classes</h2>
+          <p>Gérez les classes et affectations.</p>
+          <Link to="/classes">Ouvrir les classes</Link>
+        </section>
+      </div>
     </main>
   );
 }
@@ -96,6 +116,10 @@ export default function App() {
           <Route element={<ProtectedRoute><LayoutApp /></ProtectedRoute>}>
             <Route path="/tableau-de-bord" element={<Dashboard />} />
             <Route path="/comptes" element={<ProtectedRoute roles={['ADMIN']}><Comptes /></ProtectedRoute>} />
+            <Route path="/eleves" element={<ProtectedRoute roles={['ADMIN', 'SECRETARIAT', 'CENSEUR']}><ScolariteElevesPage /></ProtectedRoute>} />
+            <Route path="/eleves/inscription" element={<ProtectedRoute roles={['ADMIN', 'SECRETARIAT']}><InscriptionPage /></ProtectedRoute>} />
+            <Route path="/eleves/:id" element={<FicheElevePage />} />
+            <Route path="/classes" element={<ProtectedRoute roles={['ADMIN', 'SECRETARIAT', 'CENSEUR']}><ClassesPage /></ProtectedRoute>} />
           </Route>
           <Route path="/acces-interdit" element={<AccesInterdit />} />
           <Route path="*" element={<main className="container"><h1>404 — Page introuvable</h1><Link to="/">Accueil</Link></main>} />

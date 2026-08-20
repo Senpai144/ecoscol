@@ -4,6 +4,11 @@ import config from './config/index.js';
 import db from './db/index.js';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+import structureRoutes from './routes/structureRoutes.js';
+import classRoutes from './routes/classRoutes.js';
+import eleveRoutes from './routes/eleveRoutes.js';
+import pedagogiqueRoutes from './routes/pedagogiqueRoutes.js';
+import documentRoutes from './routes/documentRoutes.js';
 
 const app = express();
 
@@ -25,6 +30,11 @@ app.get('/api/health', async (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/structure', structureRoutes);
+app.use('/api/classes', classRoutes);
+app.use('/api/eleves', eleveRoutes);
+app.use('/api/pedagogique', pedagogiqueRoutes);
+app.use('/api/documents', documentRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Route inconnue' });

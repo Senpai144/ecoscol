@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="fr" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Référence design ECOSCOL — Maquette Pronote style</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="h-full flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-slate-900 border-b border-slate-800/80 px-6 py-3 flex items-center justify-between sticky top-0 z-50 backdrop-blur-md bg-opacity-80">
+        <div class="flex items-center space-x-6">
+            <div class="flex items-center space-x-3">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                    <i data-lucide="sparkles" class="w-5 h-5 text-white"></i>
+                </div>
+                <span class="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                    ECOSCOL <span class="text-xs font-normal px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">v2.0</span>
+                </span>
+            </div>
+
+            <!-- Role Switcher Badge -->
+            <div class="hidden sm:flex items-center bg-slate-800/80 border border-slate-700/60 rounded-lg p-1 text-xs font-medium">
+                <button class="px-3 py-1 rounded-md bg-indigo-600 text-white shadow-sm transition">Espace Élève</button>
+                <button class="px-3 py-1 rounded-md text-slate-400 hover:text-slate-200 transition">Espace Enseignant</button>
+                <button class="px-3 py-1 rounded-md text-slate-400 hover:text-slate-200 transition">Administration</button>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-4">
+            <button class="p-2 text-slate-400 hover:text-slate-100 hover:bg-slate-800 rounded-xl transition relative">
+                <i data-lucide="bell" class="w-5 h-5"></i>
+                <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-emerald-500 rounded-full ring-4 ring-slate-900"></span>
+            </button>
+            <button class="p-2 text-slate-400 hover:text-slate-100 hover:bg-slate-800 rounded-xl transition">
+                <i data-lucide="message-square" class="w-5 h-5"></i>
+            </button>
+
+            <div class="h-6 w-[1px] bg-slate-800"></div>
+
+            <div class="flex items-center space-x-3 pl-2">
+                <div class="text-right hidden md:block">
+                    <p class="text-xs font-semibold text-slate-200">Utilisateur Connecté</p>
+                    <p class="text-[11px] text-slate-400">[Rôle]</p>
+                </div>
+                <div class="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700/80 flex items-center justify-center font-bold text-xs text-indigo-400 ring-2 ring-indigo-500/20">
+                    EC
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sub-Header Menu Tabs -->
+    <nav class="bg-slate-900/50 border-b border-slate-800/60 px-6 flex space-x-1 overflow-x-auto">
+        <a href="#" class="flex items-center space-x-2 px-4 py-3 border-b-2 border-indigo-500 text-indigo-400 font-medium text-sm transition">
+            <i data-lucide="layout-grid" class="w-4 h-4"></i>
+            <span>Vue d'ensemble</span>
+        </a>
+        <a href="#" class="flex items-center space-x-2 px-4 py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 font-medium text-sm transition">
+            <i data-lucide="calendar" class="w-4 h-4"></i>
+            <span>Emploi du temps</span>
+        </a>
+        <a href="#" class="flex items-center space-x-2 px-4 py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 font-medium text-sm transition">
+            <i data-lucide="award" class="w-4 h-4"></i>
+            <span>Notes & Relevés</span>
+        </a>
+        <a href="#" class="flex items-center space-x-2 px-4 py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 font-medium text-sm transition">
+            <i data-lucide="check-square" class="w-4 h-4"></i>
+            <span>Travail à faire</span>
+        </a>
+        <a href="#" class="flex items-center space-x-2 px-4 py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 font-medium text-sm transition">
+            <i data-lucide="user-x" class="w-4 h-4"></i>
+            <span>Absences & Retards</span>
+        </a>
+    </nav>
+
+    <!-- Main Content Container -->
+    <main class="flex-1 p-6 max-w-[1600px] w-full mx-auto space-y-6 overflow-y-auto">
+
+        <!-- Welcome Banner -->
+        <div class="bg-gradient-to-r from-indigo-950/60 via-slate-900 to-slate-900 border border-indigo-500/20 rounded-2xl p-6 relative overflow-hidden">
+            <div class="absolute -right-10 -bottom-10 w-60 h-60 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
+                <div>
+                    <h2 class="text-xl font-bold text-white tracking-tight">Bonjour, [Utilisateur] 👋</h2>
+                    <p class="text-sm text-slate-400 mt-1">Voici le récapitulatif de votre journée du [Date du jour].</p>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <div class="bg-slate-800/80 border border-slate-700/60 rounded-xl px-4 py-2 text-center">
+                        <span class="block text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Moyenne Générale</span>
+                        <span class="text-lg font-bold text-emerald-400">— / 20</span>
+                    </div>
+                    <div class="bg-slate-800/80 border border-slate-700/60 rounded-xl px-4 py-2 text-center">
+                        <span class="block text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Rang Classe</span>
+                        <span class="text-lg font-bold text-indigo-400">—</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            <!-- Left Column -->
+            <div class="lg:col-span-2 space-y-6">
+
+                <!-- Widget: Cours du jour -->
+                <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 backdrop-blur-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-slate-200 flex items-center gap-2">
+                            <i data-lucide="clock" class="w-4 h-4 text-indigo-400"></i>
+                            <span>Cours du jour</span>
+                        </h3>
+                        <span class="text-xs text-slate-400 bg-slate-800 px-2.5 py-1 rounded-lg">Emploi du temps réel</span>
+                    </div>
+                    <!-- Contenu dynamique depuis la table emplois_du_temps -->
+                    <p class="text-sm text-slate-500">Aucun cours programmé aujourd'hui.</p>
+                </div>
+
+                <!-- Widget: Cahier de texte -->
+                <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 backdrop-blur-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-slate-200 flex items-center gap-2">
+                            <i data-lucide="book-open" class="w-4 h-4 text-emerald-400"></i>
+                            <span>Travail à faire</span>
+                        </h3>
+                        <a href="#" class="text-xs text-indigo-400 hover:underline">Agenda complet</a>
+                    </div>
+                    <p class="text-sm text-slate-500">Aucun travail à faire pour le moment.</p>
+                </div>
+
+            </div>
+
+            <!-- Right Column -->
+            <div class="space-y-6">
+
+                <!-- Widget: Dernières notes -->
+                <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 backdrop-blur-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-slate-200 flex items-center gap-2">
+                            <i data-lucide="award" class="w-4 h-4 text-amber-400"></i>
+                            <span>Dernières notes</span>
+                        </h3>
+                        <a href="#" class="text-xs text-indigo-400 hover:underline">Relevé complet</a>
+                    </div>
+                    <p class="text-sm text-slate-500">Notes bientôt disponibles après la phase Notes/Bulletins.</p>
+                </div>
+
+                <!-- Widget: Informations -->
+                <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 backdrop-blur-sm">
+                    <h3 class="font-bold text-slate-200 flex items-center gap-2 mb-4">
+                        <i data-lucide="info" class="w-4 h-4 text-cyan-400"></i>
+                        <span>Informations</span>
+                    </h3>
+                    <p class="text-sm text-slate-400">Informations de l'établissement issues de la base.</p>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- NOTE: Maquette de référence. Les données affichées doivent TOUJOURS provenir
+         de l'API (cahier des charges sections 2.2 et 12 : pas de données codées en dur).
+         À intégrer avec Tailwind CSS (via npm, pas CDN) lors du travail sur les tableaux de bord. -->
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
