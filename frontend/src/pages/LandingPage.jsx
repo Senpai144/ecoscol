@@ -123,8 +123,11 @@ export default function LandingPage() {
         <nav className="landing-nav" aria-label="Navigation">
           <a href="#etablissements">Établissements</a>
           <a href="#assistance">Assistance</a>
-          <button className="btn btn-ghost" onClick={() => navigate('/login')}>Se connecter</button>
         </nav>
+        <div className="landing-actions">
+          <Link to="/inscription" className="btn btn-primary">Créer mon école</Link>
+          <button className="btn btn-ghost" onClick={() => navigate('/login')}>Se connecter</button>
+        </div>
       </header>
 
       <section className="landing-hero">

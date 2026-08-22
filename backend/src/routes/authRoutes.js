@@ -40,7 +40,9 @@ router.post('/login', loginLimiter, async (req, res, next) => {
 
   try {
     const { rows } = await db.query(
-      `SELECT u.*, e.nom AS ecole_nom
+      `SELECT u.*, e.nom AS ecole_nom, e.sous_domaine, e.statut AS ecole_statut,
+              e.couleur_principale, e.logo_base64, e.adresse, e.telephone,
+              e.email AS ecole_email, e.slogan
        FROM users u
        LEFT JOIN ecoles e ON e.id = u.ecole_id
        WHERE LOWER(u.identifiant) = LOWER($1)`,
@@ -51,6 +53,9 @@ router.post('/login', loginLimiter, async (req, res, next) => {
     let valide = false;
     if (user) {
       const ok = await bcrypt.compare(mot_de_passe, user.mot_de_passe_hash);
+      if (user.ecole_statut !== 'actif') {
+        return res.status(403).json({ error: 'Établissement suspendu — contacter le support' });
+      }
       if (ok && user.statut === 'actif') valide = true;
       else {
         const tentatives = await compterTentativesRecentes(identifiant, config.login.windowMinutes);
@@ -70,7 +75,7 @@ router.post('/login', loginLimiter, async (req, res, next) => {
     const roles = await listerRolesParUtilisateur(user.id);
     await connexionReussie({ userId: user.id, identifiant, ip, userAgent });
 
-    const token = signToken({ userId: user.id, ecoleId: user.ecole_id });
+    const token = signToken({ userId: user.id, ecoleId: user.ecole_id, etablissementId: user.ecole_id });
 
     res.json({
       token,
@@ -82,6 +87,17 @@ router.post('/login', loginLimiter, async (req, res, next) => {
         ecoleId: user.ecole_id,
         ecoleNom: user.ecole_nom,
         roles,
+        ecole: {
+          id: user.ecole_id,
+          nom: user.ecole_nom,
+          sous_domaine: user.sous_domaine,
+          couleur_principale: user.couleur_principale,
+          logo_base64: user.logo_base64,
+          adresse: user.adresse,
+          telephone: user.telephone,
+          email: user.ecole_email,
+          slogan: user.slogan,
+        },
       },
     });
   } catch (err) {

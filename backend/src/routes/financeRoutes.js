@@ -379,6 +379,10 @@ router.patch('/paiements/:id', requireRoles(...CONTROLE), async (req, res, next)
 
 router.get('/paiements', requireRoles(...LECTURE), async (req, res, next) => {
   const { eleve_id, classe_id, date_debut, date_fin } = req.query;
+  // Pagination bornée : évite de charger des milliers de paiements d'un coup
+  const pageNum = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limitNum = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 50));
+  const offset = (pageNum - 1) * limitNum;
   try {
     const conditions = ['p.ecole_id = $1'];
     const params = [req.user.ecole_id];
@@ -401,18 +405,31 @@ router.get('/paiements', requireRoles(...LECTURE), async (req, res, next) => {
     if (req.query.annule === '1') conditions.push('p.recu_annule = TRUE');
     if (req.query.annule === '0') conditions.push('p.recu_annule = FALSE');
 
-    const { rows } = await db.query(
-      `SELECT p.*, e.prenom, e.nom, e.matricule, c.libelle AS classe_libelle,
-              ec.libelle AS echeancier_libelle
-       FROM paiements p
-       JOIN eleves e ON e.id = p.eleve_id
-       LEFT JOIN classes c ON c.id = e.classe_id
-       LEFT JOIN echeanciers ec ON ec.id = p.echeancier_id
-       WHERE ${conditions.join(' AND ')}
-       ORDER BY p.date_paiement DESC, p.id DESC`,
-      params
-    );
-    res.json({ paiements: rows });
+    const where = conditions.join(' AND ');
+    const [{ rows: totalRows }, { rows }] = await Promise.all([
+      db.query(`SELECT COUNT(*)::int AS n FROM paiements p JOIN eleves e ON e.id = p.eleve_id WHERE ${where}`, params),
+      db.query(
+        `SELECT p.*, e.prenom, e.nom, e.matricule, c.libelle AS classe_libelle,
+                ec.libelle AS echeancier_libelle
+         FROM paiements p
+         JOIN eleves e ON e.id = p.eleve_id
+         LEFT JOIN classes c ON c.id = e.classe_id
+         LEFT JOIN echeanciers ec ON ec.id = p.echeancier_id
+         WHERE ${where}
+         ORDER BY p.date_paiement DESC, p.id DESC
+         LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+        [...params, limitNum, offset]
+      ),
+    ]);
+    res.json({
+      paiements: rows,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total: totalRows[0].n,
+        pages: Math.ceil(totalRows[0].n / limitNum),
+      },
+    });
   } catch (err) {
     next(err);
   }

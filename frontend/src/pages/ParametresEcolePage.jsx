@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
-import { getParametresEcole, updateParametresEcole } from '../api.js';
+import { getParametresEcole, updateParametresEcole, uploadLogoEtablissement } from '../api.js';
 
 export default function ParametresEcolePage() {
   const { session } = useAuth();
@@ -15,13 +15,14 @@ export default function ParametresEcolePage() {
   useEffect(() => {
     getParametresEcole(session?.token)
       .then((j) => {
-        const e = j.ecole;
+        const e = j.etablissement;
         setForm({
           nom: e?.nom ?? '',
           adresse: e?.adresse ?? '',
           telephone: e?.telephone ?? '',
           email: e?.email ?? '',
           slogan: e?.slogan ?? '',
+          couleur: e?.couleur_principale ?? '#2B8C7E',
         });
         setLogo(e?.logo_base64 ?? '');
         setLogoDirty(false);
@@ -47,21 +48,40 @@ export default function ParametresEcolePage() {
     setMessage('');
     try {
       const j = await updateParametresEcole(
-        { ...form, logo_base64: logoDirty ? logo : undefined },
+        { ...form, logo_base64: undefined },
         session?.token
       );
       setForm({
-        nom: j.ecole.nom,
-        adresse: j.ecole.adresse ?? '',
-        telephone: j.ecole.telephone ?? '',
-        email: j.ecole.email ?? '',
-        slogan: j.ecole.slogan ?? '',
+        nom: j.etablissement.nom,
+        adresse: j.etablissement.adresse ?? '',
+        telephone: j.etablissement.telephone ?? '',
+        email: j.etablissement.email ?? '',
+        slogan: j.etablissement.slogan ?? '',
+        couleur: j.etablissement.couleur_principale ?? '#2B8C7E',
       });
-      setLogo(j.ecole.logo_base64 ?? '');
+      setLogo(j.etablissement.logo_base64 ?? '');
       setLogoDirty(false);
       setMessage('Paramètres de l\'établissement enregistrés. Le reçu est mis à jour immédiatement.');
     } catch (err) {
       setErreur(err.message || 'Échec de l\'enregistrement.');
+    } finally {
+      setChargement(false);
+    }
+  }
+
+  async function uploaderLogo() {
+    if (!logoInputRef.current?.files?.[0]) return;
+    setChargement(true);
+    setErreur('');
+    try {
+      const data = new FormData();
+      data.append('logo', logoInputRef.current.files[0]);
+      const j = await uploadLogoEtablissement(data, session?.token);
+      setLogo(j.etablissement.logo_base64 ?? '');
+      setForm({ ...form, couleur: j.etablissement.couleur_principale ?? form.couleur });
+      setMessage('Logo mis à jour.');
+    } catch (err) {
+      setErreur(err.message || 'Échec du téléversement du logo.');
     } finally {
       setChargement(false);
     }
@@ -173,12 +193,79 @@ export default function ParametresEcolePage() {
             placeholder="Ex. Savoir, travail, réussite"
           />
         </label>
+        <label>
+          Couleur principale
+          <div className="auth-couleur-ligne">
+            <input
+              type="color"
+              value={form.couleur}
+              onChange={(e) => setForm({ ...form, couleur: e.target.value })}
+              aria-label="Couleur principale"
+            />
+            <span className="mono">{form.couleur}</span>
+          </div>
+        </label>
 
         <div>
           <button type="submit" className="btn btn-primary" disabled={chargement}>
             {chargement ? 'Enregistrement…' : 'Enregistrer les paramètres'}
           </button>
         </div>
+
+        <hr style={{ margin: '1.5rem 0', borderColor: 'var(--line)' }} />
+
+        <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Logo de l'établissement</h3>
+        <div className="param-logo-zone">
+          <div className="param-logo-preview">
+            {logo ? (
+              <img src={logo} alt="Logo de l'établissement" />
+            ) : (
+              <span className="mono" style={{ color: 'var(--text-faint)', fontSize: '0.75rem' }}>Aucun logo</span>
+            )}
+          </div>
+          <input
+            ref={logoInputRef}
+            type="file"
+            accept="image/*"
+            onChange={importerLogo}
+            aria-label="Choisir le logo de l'établissement"
+            style={{ display: 'none' }}
+          />
+          <button
+            type="button"
+            className="btn btn-light btn-small"
+            onClick={() => logoInputRef.current?.click()}
+            disabled={chargement}
+          >
+            {logo ? 'Changer le logo' : 'Importer un logo'}
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary btn-small"
+            onClick={uploaderLogo}
+            disabled={chargement || !logoDirty}
+          >
+            Appliquer le logo
+          </button>
+          {logoDirty && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-small"
+              style={{ marginLeft: 8 }}
+              onClick={() => { setLogo(''); setLogoDirty(true); }}
+            >
+              Annuler
+            </button>
+          )}
+          <p className="param-logo-aide">
+            PNG, JPG ou SVG — le logo apparaît en haut du reçu de paiement et sur la page de connexion.
+          </p>
+        </div>
+
+        <style>{`
+          .auth-couleur-ligne { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+          .auth-couleur-ligne input[type="color"] { width: 52px; height: 34px; border: none; border-radius: 8px; cursor: pointer; padding: 0; background: none; }
+        `}</style>
       </form>
 
       <style>{`

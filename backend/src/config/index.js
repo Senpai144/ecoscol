@@ -14,6 +14,15 @@ const config = {
     user: process.env.DB_USER || 'postgres',
     password: process.env.DB_PASSWORD || 'postgres',
   },
+  redis: {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT || '6379', 10),
+    password: process.env.REDIS_PASSWORD || undefined,
+    db: parseInt(process.env.REDIS_DB || '0', 10),
+    enableOfflineQueue: true,
+    maxRetriesPerRequest: 3,
+    retryStrategy: (times) => Math.min(times * 50, 2000),
+  },
   jwt: {
     secret: process.env.JWT_SECRET || 'insecure-dev-secret',
     expiresIn: process.env.JWT_EXPIRES_IN || '8h',
@@ -24,6 +33,15 @@ const config = {
   },
   backup: {
     retentionDays: parseInt(process.env.BACKUP_RETENTION_DAYS || '14', 10),
+  },
+  queue: {
+    concurrency: parseInt(process.env.QUEUE_CONCURRENCY || '5', 10),
+    defaultJobOptions: {
+      removeOnComplete: 100,
+      removeOnFail: 50,
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 1000 },
+    },
   },
 };
 

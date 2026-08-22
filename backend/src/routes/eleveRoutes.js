@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import db from '../db/index.js';
 import { authenticate, requireRoles } from '../middleware/auth.js';
 import { journaliserAction } from '../services/authService.js';
+import { delCache } from '../services/cache.js';
 
 const router = Router();
 
@@ -195,6 +196,7 @@ router.post('/', requireRoles(...ROLES_ECRITURE), async (req, res, next) => {
     }
 
     await client.query('COMMIT');
+    await delCache(`ecoscol:ecole:${req.user.ecole_id}:classes`);
     await journaliserAction({ userId: req.user.id, action: 'inscription_eleve', cible: 'eleves', details: { id: eleve.id, matricule } });
     res.status(201).json({ eleve });
   } catch (err) {
@@ -236,6 +238,7 @@ router.patch('/:id', requireRoles(...ROLES_ECRITURE), async (req, res, next) => 
       [nom ?? null, prenom ?? null, date_naissance ?? null, sexe ?? null, adresse ?? null, classe_id ?? null, photo_path ?? null, id, req.user.ecole_id]
     );
     if (rows.length === 0) return res.status(404).json({ error: 'Élève introuvable' });
+    await delCache(`ecoscol:ecole:${req.user.ecole_id}:classes`);
     await journaliserAction({ userId: req.user.id, action: 'modification_eleve', cible: 'eleves', details: { id } });
     res.json({ eleve: rows[0] });
   } catch (err) {
@@ -255,6 +258,7 @@ router.patch('/:id/statut', requireRoles(...ROLES_ECRITURE), async (req, res, ne
       [statut, id, req.user.ecole_id]
     );
     if (rows.length === 0) return res.status(404).json({ error: 'Élève introuvable' });
+    await delCache(`ecoscol:ecole:${req.user.ecole_id}:classes`);
     await journaliserAction({ userId: req.user.id, action: `statut_eleve_${statut}`, cible: 'eleves', details: { id } });
     res.json({ eleve: rows[0] });
   } catch (err) {
@@ -270,6 +274,7 @@ router.delete('/:id', requireRoles(...ROLES_ECRITURE), async (req, res, next) =>
       ['archive', id, req.user.ecole_id]
     );
     if (rows.length === 0) return res.status(404).json({ error: 'Élève introuvable' });
+    await delCache(`ecoscol:ecole:${req.user.ecole_id}:classes`);
     await journaliserAction({ userId: req.user.id, action: 'archivage_eleve', cible: 'eleves', details: { id } });
     res.json({ message: 'Dossier élève archivé' });
   } catch (err) {

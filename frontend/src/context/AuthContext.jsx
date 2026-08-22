@@ -21,6 +21,12 @@ export function AuthProvider({ children }) {
     return user;
   }, []);
 
+  const connecter = useCallback(({ token, user }) => {
+    sauvegarderSession({ token, user });
+    setSession({ token, user });
+    return user;
+  }, []);
+
   const logout = useCallback(async () => {
     if (session) {
       await seDeconnecter(session.token);
@@ -34,7 +40,7 @@ export function AuthProvider({ children }) {
   );
 
   return (
-    <AuthContext.Provider value={{ session, login, logout, aRole }}>
+    <AuthContext.Provider value={{ session, login, connecter, logout, aRole }}>
       {children}
     </AuthContext.Provider>
   );

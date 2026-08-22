@@ -16,7 +16,11 @@ export async function authenticate(req, res, next) {
   }
 
   const { rows } = await db.query(
-    'SELECT id, ecole_id, nom, prenom, identifiant, statut FROM users WHERE id = $1',
+    `SELECT u.id, u.ecole_id, u.nom, u.prenom, u.identifiant, u.statut,
+            e.statut AS etablissement_statut
+     FROM users u
+     JOIN ecoles e ON e.id = u.ecole_id
+     WHERE u.id = $1`,
     [payload.userId]
   );
   const user = rows[0];
@@ -26,10 +30,16 @@ export async function authenticate(req, res, next) {
   if (user.statut !== 'actif') {
     return res.status(403).json({ error: 'Compte désactivé' });
   }
+  if (user.etablissement_statut !== 'actif') {
+    return res.status(403).json({ error: 'Établissement suspendu — contacter le support' });
+  }
 
   if (user.statut === 'actif') {
     const roles = await listerRolesParUtilisateur(user.id);
+    // Règle critique multi-tenant : l'établissement est TOUJOURS déduit de la session JWT,
+    // jamais d'une valeur envoyée par le client.
     req.user = { ...user, roles };
+    req.etablissement_id = user.ecole_id;
   }
   next();
 }

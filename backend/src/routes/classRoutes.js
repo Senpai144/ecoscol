@@ -2,6 +2,7 @@ import { Router } from 'express';
 import db from '../db/index.js';
 import { authenticate, requireRoles } from '../middleware/auth.js';
 import { journaliserAction } from '../services/authService.js';
+import { getCache, setCache, delCache, CACHE_TTL } from '../services/cache.js';
 
 const router = Router();
 
@@ -10,8 +11,15 @@ router.use(authenticate);
 const ROLES_LECTURE = ['ADMIN', 'SECRETARIAT', 'CENSEUR', 'ENSEIGNANT', 'COMPTABLE'];
 const ROLES_ECRITURE = ['ADMIN', 'SECRETARIAT', 'CENSEUR'];
 
+function classesCacheKey(ecoleId) {
+  return `ecoscol:ecole:${ecoleId}:classes`;
+}
+
 router.get('/', requireRoles(...ROLES_LECTURE), async (req, res, next) => {
   try {
+    const cached = await getCache(classesCacheKey(req.user.ecole_id));
+    if (cached) return res.json({ classes: cached });
+
     const { rows } = await db.query(
       `SELECT c.*, n.libelle AS niveau_libelle, s.libelle AS serie_libelle,
               a.libelle AS annee_libelle,
@@ -27,6 +35,7 @@ router.get('/', requireRoles(...ROLES_LECTURE), async (req, res, next) => {
        ORDER BY a.date_debut DESC, n.ordre, c.libelle`,
       [req.user.ecole_id]
     );
+    await setCache(classesCacheKey(req.user.ecole_id), rows, CACHE_TTL.CLASSES);
     res.json({ classes: rows });
   } catch (err) {
     next(err);
@@ -47,6 +56,7 @@ router.post('/', requireRoles(...ROLES_ECRITURE), async (req, res, next) => {
        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
       [req.user.ecole_id, annee_scolaire_id, niveau_id, serie_id ?? null, libelle, capacite, salle ?? null]
     );
+    await delCache(classesCacheKey(req.user.ecole_id));
     await journaliserAction({ userId: req.user.id, action: 'creation_classe', cible: 'classes', details: rows[0] });
     res.status(201).json({ classe: rows[0] });
   } catch (err) {
@@ -71,6 +81,7 @@ router.patch('/:id', requireRoles(...ROLES_ECRITURE), async (req, res, next) => 
       [libelle ?? null, serie_id ?? null, capacite ?? null, salle ?? null, id, req.user.ecole_id]
     );
     if (rows.length === 0) return res.status(404).json({ error: 'Classe introuvable' });
+    await delCache(classesCacheKey(req.user.ecole_id));
     await journaliserAction({ userId: req.user.id, action: 'modification_classe', cible: 'classes', details: rows[0] });
     res.json({ classe: rows[0] });
   } catch (err) {

@@ -3,8 +3,10 @@ import { BrowserRouter, Routes, Route, Link, Outlet, useNavigate, useLocation } 
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import { apiFetch } from './api.js';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
+import { appliquerThemeEtablissement } from './theme.js';
 import { formatDate } from './components/ui.jsx';
 import LoginPage from './pages/LoginPage.jsx';
+import OnboardingPage from './pages/OnboardingPage.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import ClassesPage from './pages/ClassesPage.jsx';
 import ScolariteElevesPage from './pages/ScolariteElevesPage.jsx';
@@ -70,6 +72,10 @@ function LayoutApp() {
   const peutVieScolaire = roles.some((r) => ['ADMIN', 'SECRETARIAT', 'CENSEUR', 'ENSEIGNANT'].includes(r));
   const peutFinances = roles.some((r) => ['ADMIN', 'SECRETARIAT', 'COMPTABLE'].includes(r));
   const initiales = ((session?.user?.prenom?.[0] ?? '') + (session?.user?.nom?.[0] ?? '')).toUpperCase();
+
+  useEffect(() => {
+    appliquerThemeEtablissement(session?.user?.ecole?.couleur_principale);
+  }, [session]);
 
   const items = [
     { vers: '/tableau-de-bord', label: 'Accueil', visible: true, icone: <IconeAccueil /> },
@@ -194,6 +200,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/inscription" element={<OnboardingPage />} />
           <Route path="/portail" element={<ProtectedRoute roles={['PARENT']}><PortailPage /></ProtectedRoute>} />
           <Route path="/portail/recu/:paiementId" element={<ProtectedRoute roles={['PARENT']}><RecuPage /></ProtectedRoute>} />
           <Route element={<ProtectedRoute><LayoutApp /></ProtectedRoute>}>

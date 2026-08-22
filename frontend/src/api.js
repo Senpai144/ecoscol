@@ -4,7 +4,8 @@ const TOKEN_KEY = 'ecoscol_token';
 const USER_KEY = 'ecoscol_user';
 
 export async function apiFetch(path, { method = 'GET', body, token } = {}) {
-  const headers = { 'Content-Type': 'application/json' };
+  const headers = {};
+  if (!(body instanceof FormData)) headers['Content-Type'] = 'application/json';
   if (token) headers.Authorization = `Bearer ${token}`;
 
   const controller = new AbortController();
@@ -13,7 +14,7 @@ export async function apiFetch(path, { method = 'GET', body, token } = {}) {
     const res = await fetch(`${API_URL}${path}`, {
       method,
       headers,
-      body: body ? JSON.stringify(body) : undefined,
+      body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
       signal: controller.signal,
     });
     clearTimeout(timeout);
@@ -61,11 +62,27 @@ export async function seConnecter(identifiant, motDePasse) {
 }
 
 export async function getParametresEcole(token) {
-  return apiFetch('/api/structure/ecole', { token });
+  return apiFetch('/api/etablissements/moi', { token });
 }
 
 export async function updateParametresEcole(data, token) {
-  return apiFetch('/api/structure/ecole', { method: 'PATCH', body: data, token });
+  return apiFetch('/api/etablissements/moi', { method: 'PATCH', body: data, token });
+}
+
+export async function uploadLogoEtablissement(formData, token) {
+  return apiFetch('/api/etablissements/moi/logo', { method: 'POST', body: formData, token });
+}
+
+export async function getEtablissementPublic(domaine) {
+  return apiFetch(`/api/public/etablissement?domaine=${encodeURIComponent(domaine)}`);
+}
+
+export async function verifierSousDomaine(nom) {
+  return apiFetch(`/api/etablissements/verifier-sous-domaine?nom=${encodeURIComponent(nom)}`);
+}
+
+export async function creerEtablissement(data) {
+  return apiFetch('/api/etablissements', { method: 'POST', body: data });
 }
 
 export async function seDeconnecter(token) {
