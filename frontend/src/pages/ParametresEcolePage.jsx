@@ -48,7 +48,14 @@ export default function ParametresEcolePage() {
     setMessage('');
     try {
       const j = await updateParametresEcole(
-        { ...form, logo_base64: undefined },
+        {
+          nom: form.nom,
+          adresse: form.adresse,
+          telephone: form.telephone,
+          email_contact: form.email,
+          slogan: form.slogan,
+          couleur_principale: form.couleur,
+        },
         session?.token
       );
       setForm({

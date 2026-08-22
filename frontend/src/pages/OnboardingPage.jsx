@@ -60,11 +60,24 @@ export default function InscriptionPage() {
   async function creerEtablissement_(e) {
     e.preventDefault();
     setErreur('');
-    if (!nom || !sousDomaine || !email || motDePasse.length < 8) {
+    const domaine = sousDomaine.trim().toLowerCase();
+    if (!nom || !domaine || !email || motDePasse.length < 8) {
       setErreur('Tous les champs sont requis ; le mot de passe doit compter au moins 8 caractères.');
       return;
     }
-    if (disponible !== true) {
+    // Re-vérification synchrone au moment du submit : l'utilisateur peut cliquer
+    // avant la fin du débounce de vérification temps réel (400 ms).
+    setVerificationEnCours(true);
+    let verif = { disponible: false };
+    try {
+      verif = await verifierSousDomaine(domaine);
+    } catch {
+      verif = { disponible: false };
+    } finally {
+      setVerificationEnCours(false);
+    }
+    setDisponible(verif.disponible);
+    if (!verif.disponible) {
       setErreur('Ce sous-domaine n\'est pas disponible.');
       return;
     }
@@ -74,7 +87,7 @@ export default function InscriptionPage() {
     }
     setChargement(true);
     try {
-      const j = await creerEtablissement({ nom, sous_domaine: sousDomaine.trim().toLowerCase(), email, mot_de_passe: motDePasse });
+      const j = await creerEtablissement({ nom, sous_domaine: domaine, email, mot_de_passe: motDePasse });
       connecter({ token: j.token, user: j.user });
       setEtabCree(j.etablissement ?? j.user.etablissement);
       setEtape(2);

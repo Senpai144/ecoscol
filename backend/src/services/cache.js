@@ -4,6 +4,10 @@ import logger from './logger.js';
 
 let redis = null;
 let isConnected = false;
+// Après plusieurs échecs consécutifs, on arrête de réessayer pour ne pas
+// spammer les logs quand Redis n'est simplement pas installé (développement local).
+let echecsConnexion = 0;
+const MAX_ECHECS_CONNEXION = 5;
 
 function getRedis() {
   if (!redis) {
@@ -12,25 +16,33 @@ function getRedis() {
       port: config.redis.port,
       password: config.redis.password,
       db: config.redis.db,
-      enableOfflineQueue: config.redis.enableOfflineQueue,
-      maxRetriesPerRequest: config.redis.maxRetriesPerRequest,
-      retryStrategy: config.redis.retryStrategy,
+      enableOfflineQueue: false,
+      maxRetriesPerRequest: 1,
       lazyConnect: true,
+      retryStrategy(times) {
+        if (times > MAX_ECHECS_CONNEXION) {
+          return null;
+        }
+        return Math.min(times * 200, 2000);
+      },
     });
 
     redis.on('connect', () => {
       isConnected = true;
+      echecsConnexion = 0;
       logger.info('Redis connected');
     });
 
     redis.on('error', (err) => {
-      logger.error({ err }, 'Redis error');
-      isConnected = false;
+      echecsConnexion += 1;
+      if (echecsConnexion <= MAX_ECHECS_CONNEXION) {
+        logger.warn({ code: err.code }, 'Redis indisponible (cache désactivé, fallback DB actif)');
+      }
     });
 
-    redis.on('close', () => {
+    redis.on('end', () => {
       isConnected = false;
-      logger.warn('Redis connection closed');
+      logger.info('Cache Redis désactivé (connexion fermée définitivement)');
     });
   }
   return redis;
